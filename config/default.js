@@ -345,6 +345,29 @@ module.exports = {
       PROPOSER_KEY: process.env.PROPOSER_KEY,
       CHALLENGER_KEY: process.env.CHALLENGER_KEY,
     },
+    ethSepolia: {
+      name: 'ethSepolia',
+      chainId: 11155111,
+      clientApiUrl: process.env.CLIENT_HOST
+        ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
+        : 'http://localhost:8080',
+      optimistApiUrl: process.env.OPTIMIST_HOST
+        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
+        : 'http://localhost:8081',
+      optimistWsUrl: process.env.OPTIMIST_HOST
+        ? `ws://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_WS_PORT}`
+        : 'ws://localhost:8082',
+      proposerBaseUrl: process.env.PROPOSER_HOST
+        ? `http://${process.env.PROPOSER_HOST}:${process.env.PROPOSER_PORT}`
+        : 'http://localhost:8092',
+      adversarialOptimistApiUrl: 'http://localhost:8088',
+      adversarialOptimistWsUrl: 'ws://localhost:8089',
+      adversarialClientApiUrl: 'http://localhost:8093',
+      adversarialClientWsUrl: 'ws://localhost:8094',
+      web3WsUrl: process.env.BLOCKCHAIN_URL,
+      PROPOSER_KEY: process.env.PROPOSER_KEY,
+      CHALLENGER_KEY: process.env.CHALLENGER_KEY,
+    },
     polygonPos: {
       name: 'polygonPos',
       chainId: 137,
