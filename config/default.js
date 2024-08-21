@@ -733,6 +733,18 @@ module.exports = {
           amount: process.env.MATIC_RESTRICT || '1000000000000000000000',
         },
       ],
+      ethSepolia: [
+        {
+          name: 'USDC',
+          address: '0xE097d6B3100777DC31B34dC2c58fB524C2e76921',
+          amount: process.env.USDC_RESTRICT || '1000000000',
+        },
+        {
+          name: 'ETH',
+          address: '0x768fE7cDf628c214D59b4941Db59Be731cC4B0Cd',
+          amount: process.env.MATIC_RESTRICT || '1000000000000000000000',
+        },
+      ],
       polygonPos: [
         {
           name: 'USDC',
