@@ -63,6 +63,7 @@
     },
     "snarkjs":{
       "ejs": "3.1.9"
-    }
+    },
+    "browserify-sign": "^4.2.2"
   }
 }

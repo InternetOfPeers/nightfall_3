@@ -133,6 +133,7 @@
     "common-files": "file:./common-files",
     "docker-cli-js": "^2.9.0",
     "docker-compose": "^0.23.13",
+    "elliptic": "^6.5.7",
     "ethereumjs-util": "^7.1.5",
     "ethereumjs-wallet": "^1.0.2",
     "ffjavascript": "^0.2.57",
@@ -146,6 +147,7 @@
     "colors": "$colors",
     "hardhat": "$hardhat",
     "solidity-coverage": "^0.8.2",
-    "@solidity-parser/parser": "^0.15.0"
+    "@solidity-parser/parser": "^0.15.0",
+    "elliptic": "^6.5.7"
   }
 }
