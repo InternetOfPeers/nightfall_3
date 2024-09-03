@@ -65,6 +65,9 @@
     "request-promise-native": {
       "tough-cookie": "4.1.3"
     },
-    "elliptic": "6.5.7"
+    "elliptic": "6.5.7",
+    "socks": {
+      "ip": "^2.0.1"
+    }
   }
 }

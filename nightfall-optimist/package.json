@@ -62,6 +62,9 @@
     "snarkjs":{
       "ejs": "3.1.9"
     },
-    "elliptic": "6.5.7"
+    "elliptic": "6.5.7",
+    "socks": {
+      "ip": "^2.0.1"
+    }
   }
 }
