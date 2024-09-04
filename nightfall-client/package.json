@@ -37,7 +37,7 @@
     "general-number": "^1.0.1",
     "hex-to-binary": "^1.0.1",
     "keccak": "^3.0.1",
-    "mongodb": "^4.7.0",
+    "mongodb": "4.17.0",
     "path": "^0.12.7",
     "queue": "^6.0.2",
     "safe-buffer": "^5.2.1",
