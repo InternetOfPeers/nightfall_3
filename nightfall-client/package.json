@@ -67,8 +67,6 @@
     },
     "browserify-sign": "^4.2.2",
     "elliptic": "^6.5.7",
-    "socks": {
-      "ip": "^2.0.1"
-    }
+    "socks": "^2.8.3"
   }
 }
