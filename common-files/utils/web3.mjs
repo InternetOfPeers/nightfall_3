@@ -76,12 +76,20 @@ export default {
 
     const fromAddress = await this.web3.eth.accounts.privateKeyToAccount(config.ETH_PRIVATE_KEY);
 
-    let gasPrice;
+    let maxFeePerGas;
+    let maxPriorityFeePerGas;
     try {
-      gasPrice = await this.web3.eth.getGasPrice();
+      const latestBlock = await this.web3.eth.getBlock('latest');
+      const feeHistory = await this.web3.eth.getFeeHistory(10, latestBlock.number, [25, 50, 75]);
+
+      const baseFeePerGas = Number(feeHistory.baseFeePerGas[feeHistory.baseFeePerGas.length - 1]);
+      const priorityFeePerGas = feeHistory.reward[feeHistory.reward.length - 1];
+      maxPriorityFeePerGas = Math.max(...priorityFeePerGas[2], config.WEB3_OPTIONS.minPriorityFee);
+      maxFeePerGas = baseFeePerGas + maxPriorityFeePerGas;
     } catch (error) {
-      console.warn('Failed to fetch current gas price. Using default value from config.');
-      gasPrice = config.WEB3_OPTIONS.gasPrice;
+      console.warn('Failed to fetch fee history. Using default values from config.');
+      maxFeePerGas = config.WEB3_OPTIONS.gasPrice;
+      maxPriorityFeePerGas = config.WEB3_OPTIONS.gasPrice;
     }
 
     const tx = {
@@ -89,7 +97,8 @@ export default {
       to: contractAddress,
       data: rawTransaction,
       value,
-      gasPrice,
+      maxFeePerGas: this.web3.utils.toHex(maxFeePerGas),
+      maxPriorityFeePerGas: this.web3.utils.toHex(maxPriorityFeePerGas),
     };
     tx.gas = await this.estimateGas(tx);
     const signed = await this.web3.eth.accounts.signTransaction(tx, config.ETH_PRIVATE_KEY);
