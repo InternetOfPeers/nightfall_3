@@ -115,17 +115,19 @@ export default {
     try {
       const latestBlock = await this.web3.eth.getBlock('latest');
       const feeHistory = await this.web3.eth.getFeeHistory(5, latestBlock.number, [25, 50, 75]);
-
+      logger.info(feeHistory, 'Fee History');
       const formattedFeeHistory = this.formatFeeHistory(feeHistory, false, 5);
+      logger.info(formattedFeeHistory, 'Formatted Fee History');
       const latestBlockFee = formattedFeeHistory[formattedFeeHistory.length - 1];
-
+      logger.info(latestBlockFee, 'Latest Block Fee');
       maxPriorityFeePerGas = Math.max(
         ...latestBlockFee.priorityFeePerGas[2],
         config.WEB3_OPTIONS.gasPrice,
       );
       maxFeePerGas = latestBlockFee.baseFeePerGas + maxPriorityFeePerGas;
     } catch (error) {
-      console.warn('Failed to fetch fee history. Using default values from config.');
+      logger.debug(`Err: ${error.message}`);
+      logger.warn('Failed to fetch fee history. Using default values from config.');
       maxFeePerGas = config.WEB3_OPTIONS.gasPrice * 2;
       maxPriorityFeePerGas = config.WEB3_OPTIONS.gasPrice;
     }
