@@ -66,8 +66,42 @@ export default {
     gas = Math.ceil(gas * 2); // 50% seems a more than reasonable buffer
     return gas;
   },
+  // function to format fee history inspired by https://docs.alchemy.com/docs/how-to-build-a-gas-fee-estimator-using-eip-1559
+  formatFeeHistory(result, includePending, historicalBlocks) {
+    if (historicalBlocks === undefined) {
+      // eslint-disable-next-line no-param-reassign
+      historicalBlocks = result.reward.length;
+    }
+
+    let blockNum = result.oldestBlock;
+    let index = 0;
+    const blocks = [];
+
+    while (index < historicalBlocks && index < result.reward.length) {
+      blocks.push({
+        number: blockNum,
+        baseFeePerGas: Number(result.baseFeePerGas[index]),
+        gasUsedRatio: Number(result.gasUsedRatio[index]),
+        priorityFeePerGas: result.reward[index].map(x => Number(x)),
+      });
+      blockNum += 1;
+      index += 1;
+    }
+
+    if (includePending && result.baseFeePerGas.length > historicalBlocks) {
+      blocks.push({
+        number: 'pending',
+        baseFeePerGas: Number(result.baseFeePerGas[historicalBlocks]),
+        gasUsedRatio: NaN,
+        priorityFeePerGas: [],
+      });
+    }
+
+    return blocks;
+  },
 
   // function only needed for infura deployment
+  // 26-Sep-2024: Updated with basic EIP 1559 support
   async submitRawTransaction(rawTransaction, contractAddress, value = 0) {
     if (!rawTransaction) throw Error('No tx data to sign');
     if (!contractAddress) throw Error('No contract address passed');
@@ -80,15 +114,19 @@ export default {
     let maxPriorityFeePerGas;
     try {
       const latestBlock = await this.web3.eth.getBlock('latest');
-      const feeHistory = await this.web3.eth.getFeeHistory(10, latestBlock.number, [25, 50, 75]);
+      const feeHistory = await this.web3.eth.getFeeHistory(5, latestBlock.number, [25, 50, 75]);
 
-      const baseFeePerGas = Number(feeHistory.baseFeePerGas[feeHistory.baseFeePerGas.length - 1]);
-      const priorityFeePerGas = feeHistory.reward[feeHistory.reward.length - 1];
-      maxPriorityFeePerGas = Math.max(...priorityFeePerGas[2], config.WEB3_OPTIONS.gasPrice);
-      maxFeePerGas = baseFeePerGas + maxPriorityFeePerGas;
+      const formattedFeeHistory = this.formatFeeHistory(feeHistory, false, 5);
+      const latestBlockFee = formattedFeeHistory[formattedFeeHistory.length - 1];
+
+      maxPriorityFeePerGas = Math.max(
+        ...latestBlockFee.priorityFeePerGas[2],
+        config.WEB3_OPTIONS.gasPrice,
+      );
+      maxFeePerGas = latestBlockFee.baseFeePerGas + maxPriorityFeePerGas;
     } catch (error) {
       console.warn('Failed to fetch fee history. Using default values from config.');
-      maxFeePerGas = config.WEB3_OPTIONS.gasPrice;
+      maxFeePerGas = config.WEB3_OPTIONS.gasPrice * 2;
       maxPriorityFeePerGas = config.WEB3_OPTIONS.gasPrice;
     }
 
