@@ -76,12 +76,20 @@ export default {
 
     const fromAddress = await this.web3.eth.accounts.privateKeyToAccount(config.ETH_PRIVATE_KEY);
 
+    let gasPrice;
+    try {
+      gasPrice = await this.web3.eth.getGasPrice();
+    } catch (error) {
+      console.warn('Failed to fetch current gas price. Using default value from config.');
+      gasPrice = config.WEB3_OPTIONS.gasPrice;
+    }
+
     const tx = {
       from: fromAddress.address,
       to: contractAddress,
       data: rawTransaction,
       value,
-      gasPrice: config.WEB3_OPTIONS.gasPrice,
+      gasPrice,
     };
     tx.gas = await this.estimateGas(tx);
     const signed = await this.web3.eth.accounts.signTransaction(tx, config.ETH_PRIVATE_KEY);
