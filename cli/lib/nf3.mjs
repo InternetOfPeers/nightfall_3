@@ -342,6 +342,84 @@ class Nf3 {
     return Math.ceil(proposedGasPrice * GAS_PRICE_MULTIPLIER);
   }
 
+  formatFeeHistory(result, includePending, historicalBlocks) {
+    if (historicalBlocks === undefined) {
+      historicalBlocks = result.reward.length;
+    }
+
+    let blockNum = result.oldestBlock;
+    let index = 0;
+    const blocks = [];
+
+    while (index < historicalBlocks && index < result.reward.length) {
+      blocks.push({
+        number: blockNum,
+        baseFeePerGas: Number(result.baseFeePerGas[index]),
+        gasUsedRatio: Number(result.gasUsedRatio[index]),
+        priorityFeePerGas: result.reward[index].map(x => Number(x)),
+      });
+      blockNum += 1;
+      index += 1;
+    }
+
+    if (includePending && result.baseFeePerGas.length > historicalBlocks) {
+      blocks.push({
+        number: 'pending',
+        baseFeePerGas: Number(result.baseFeePerGas[historicalBlocks]),
+        gasUsedRatio: NaN,
+        priorityFeePerGas: [],
+      });
+    }
+
+    return blocks;
+  }
+
+  async estimatePriorityFeePerGas(web3, desiredSpeed = 'medium') {
+    const NUM_BLOCKS = 20;
+    const PERCENTILES = [25, 50, 75];
+
+    // Retrieve fee history for the last NUM_BLOCKS blocks
+    const feeHistory = await web3.eth.getFeeHistory(NUM_BLOCKS, 'latest', PERCENTILES);
+
+    // Format the fee history data
+    const formattedFeeHistory = this.formatFeeHistory(feeHistory, false, NUM_BLOCKS);
+
+    // Extract the base fees, priority fees, and gas used ratios from the formatted data
+    const baseFees = formattedFeeHistory.map(block => block.baseFeePerGas);
+    const priorityFees = formattedFeeHistory.map(block => block.priorityFeePerGas);
+    const gasUsedRatios = formattedFeeHistory.map(block => block.gasUsedRatio);
+
+    // Calculate the average base fee and gas used ratio
+    const avgBaseFee = baseFees.reduce((sum, fee) => sum + fee, 0) / NUM_BLOCKS;
+    const avgGasUsedRatio = gasUsedRatios.reduce((sum, ratio) => sum + ratio, 0) / NUM_BLOCKS;
+
+    // Define the minimum priority fee and speed multipliers
+    const MIN_PRIORITY_FEE = 1.5e9; // 1.5 Gwei
+    const SPEED_MULTIPLIERS = {
+      low: 0.5,
+      medium: 1,
+      high: 1.5,
+    };
+
+    // Calculate the priority fee based on the desired speed and recent fee history
+    const weightedAvgPriorityFee = priorityFees.reduce((sum, priorityFee, index) => {
+      const weight = (index + 1) / NUM_BLOCKS;
+      return sum + priorityFee[2] * weight;
+    }, 0);
+
+    let estimatedPriorityFee = weightedAvgPriorityFee * SPEED_MULTIPLIERS[desiredSpeed];
+
+    // Adjust the priority fee based on network congestion
+    if (avgBaseFee > 100e9 && avgGasUsedRatio > 0.9) {
+      estimatedPriorityFee *= 1.2; // Increase by 20% during high congestion
+    }
+
+    // Ensure the estimated priority fee is not lower than the minimum
+    estimatedPriorityFee = Math.max(estimatedPriorityFee, MIN_PRIORITY_FEE);
+
+    return Math.round(estimatedPriorityFee);
+  }
+
   /**
   Method for signing an Ethereum transaction to the
   blockchain.
@@ -358,9 +436,16 @@ class Nf3 {
     let signed;
 
     await this.nonceMutex.runExclusive(async () => {
-      // estimate the gasPrice
-      const gasPrice = await this.estimateGasPrice();
-      // Estimate the gasLimit
+      // Fetch the current block
+      const block = await this.web3.eth.getBlock('latest');
+
+      // Fetch the base fee per gas from the block
+      const baseFeePerGas = block.baseFeePerGas;
+
+      // Estimate the priority fee per gas
+      const priorityFeePerGas = await this.estimatePriorityFeePerGas();
+
+      // Estimate the gas limit
       const gas = await this.estimateGas(contractAddress, unsignedTransaction);
 
       // Update nonce if necessary
@@ -369,13 +454,17 @@ class Nf3 {
         this.nonce = _nonce;
       }
 
+      // Calculate the max fee per gas
+      const maxFeePerGas = baseFeePerGas + priorityFeePerGas;
+
       tx = {
         from: this.ethereumAddress,
         to: contractAddress,
         data: unsignedTransaction,
         value: fee,
         gas,
-        gasPrice,
+        maxFeePerGas,
+        maxPriorityFeePerGas: priorityFeePerGas,
         nonce: this.nonce,
       };
       this.nonce++;
