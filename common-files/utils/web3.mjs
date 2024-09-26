@@ -84,7 +84,7 @@ export default {
 
       const baseFeePerGas = Number(feeHistory.baseFeePerGas[feeHistory.baseFeePerGas.length - 1]);
       const priorityFeePerGas = feeHistory.reward[feeHistory.reward.length - 1];
-      maxPriorityFeePerGas = Math.max(...priorityFeePerGas[2], config.WEB3_OPTIONS.minPriorityFee);
+      maxPriorityFeePerGas = Math.max(...priorityFeePerGas[2], config.WEB3_OPTIONS.gasPrice);
       maxFeePerGas = baseFeePerGas + maxPriorityFeePerGas;
     } catch (error) {
       console.warn('Failed to fetch fee history. Using default values from config.');
