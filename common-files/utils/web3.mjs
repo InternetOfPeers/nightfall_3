@@ -100,12 +100,12 @@ export default {
     return blocks;
   },
   // Estimate the EIP 1559 priority fee
-  async estimatePriorityFeePerGas(web3, desiredSpeed = 'medium') {
-    const NUM_BLOCKS = 20;
+  async estimatePriorityFeePerGas(numOfBlocks = 5, desiredSpeed = 'medium') {
+    const NUM_BLOCKS = numOfBlocks;
     const PERCENTILES = [25, 50, 75];
 
     // Retrieve fee history for the last NUM_BLOCKS blocks
-    const feeHistory = await web3.eth.getFeeHistory(NUM_BLOCKS, 'latest', PERCENTILES);
+    const feeHistory = await this.web3.eth.getFeeHistory(NUM_BLOCKS, 'latest', PERCENTILES);
 
     // Format the fee history data
     const formattedFeeHistory = this.formatFeeHistory(feeHistory, false, NUM_BLOCKS);
