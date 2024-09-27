@@ -463,8 +463,8 @@ class Nf3 {
         data: unsignedTransaction,
         value: fee,
         gas,
-        maxFeePerGas,
-        maxPriorityFeePerGas: priorityFeePerGas,
+        maxFeePerGas: this.web3.utils.toHex(maxFeePerGas),
+        maxPriorityFeePerGas: this.web3.utils.toHex(priorityFeePerGas),
         nonce: this.nonce,
       };
       this.nonce++;

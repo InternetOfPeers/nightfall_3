@@ -99,6 +99,52 @@ export default {
 
     return blocks;
   },
+  // Estimate the EIP 1559 priority fee
+  async estimatePriorityFeePerGas(web3, desiredSpeed = 'medium') {
+    const NUM_BLOCKS = 20;
+    const PERCENTILES = [25, 50, 75];
+
+    // Retrieve fee history for the last NUM_BLOCKS blocks
+    const feeHistory = await web3.eth.getFeeHistory(NUM_BLOCKS, 'latest', PERCENTILES);
+
+    // Format the fee history data
+    const formattedFeeHistory = this.formatFeeHistory(feeHistory, false, NUM_BLOCKS);
+
+    // Extract the base fees, priority fees, and gas used ratios from the formatted data
+    const baseFees = formattedFeeHistory.map(block => block.baseFeePerGas);
+    const priorityFees = formattedFeeHistory.map(block => block.priorityFeePerGas);
+    const gasUsedRatios = formattedFeeHistory.map(block => block.gasUsedRatio);
+
+    // Calculate the average base fee and gas used ratio
+    const avgBaseFee = baseFees.reduce((sum, fee) => sum + fee, 0) / NUM_BLOCKS;
+    const avgGasUsedRatio = gasUsedRatios.reduce((sum, ratio) => sum + ratio, 0) / NUM_BLOCKS;
+
+    // Define the minimum priority fee and speed multipliers
+    const MIN_PRIORITY_FEE = 1.5e9; // 1.5 Gwei
+    const SPEED_MULTIPLIERS = {
+      low: 0.5,
+      medium: 1,
+      high: 1.5,
+    };
+
+    // Calculate the priority fee based on the desired speed and recent fee history
+    const weightedAvgPriorityFee = priorityFees.reduce((sum, priorityFee, index) => {
+      const weight = (index + 1) / NUM_BLOCKS;
+      return sum + priorityFee[2] * weight;
+    }, 0);
+
+    let estimatedPriorityFee = weightedAvgPriorityFee * SPEED_MULTIPLIERS[desiredSpeed];
+
+    // Adjust the priority fee based on network congestion
+    if (avgBaseFee > 100e9 && avgGasUsedRatio > 0.9) {
+      estimatedPriorityFee *= 1.2; // Increase by 20% during high congestion
+    }
+
+    // Ensure the estimated priority fee is not lower than the minimum
+    estimatedPriorityFee = Math.max(estimatedPriorityFee, MIN_PRIORITY_FEE);
+
+    return Math.round(estimatedPriorityFee);
+  },
 
   // function only needed for infura deployment
   // 26-Sep-2024: Updated with basic EIP 1559 support
@@ -118,13 +164,10 @@ export default {
       logger.info(feeHistory, 'Fee History');
       const formattedFeeHistory = this.formatFeeHistory(feeHistory, false, 5);
       logger.info(formattedFeeHistory, 'Formatted Fee History');
-      const latestBlockFee = formattedFeeHistory[formattedFeeHistory.length - 1];
-      logger.info(latestBlockFee, 'Latest Block Fee');
-      maxPriorityFeePerGas = Math.max(
-        ...latestBlockFee.priorityFeePerGas[2],
-        config.WEB3_OPTIONS.gasPrice,
-      );
-      maxFeePerGas = latestBlockFee.baseFeePerGas + maxPriorityFeePerGas;
+      const { baseFeePerGas } = latestBlock;
+      logger.info(baseFeePerGas, 'baseFeePerGas');
+      maxPriorityFeePerGas = await this.estimatePriorityFeePerGas();
+      maxFeePerGas = baseFeePerGas + maxPriorityFeePerGas;
     } catch (error) {
       logger.debug(`Err: ${error.message}`);
       logger.warn('Failed to fetch fee history. Using default values from config.');
