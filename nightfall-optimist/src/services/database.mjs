@@ -22,6 +22,7 @@ const {
   TIMBER_COLLECTION,
   TIMBER_HEIGHT,
   HASH_TYPE,
+  MEMPOOL_TXS_FETCH_LIMIT,
 } = config;
 
 /**
@@ -367,14 +368,20 @@ export async function getMempoolTransactions() {
 /**
  * Return all mempool transactions sorted by fee (most profitable first)
  */
-export async function getMempoolTransactionsSortedByFee() {
+export async function getMempoolTransactionsSortedByFee(mempoolLimit = MEMPOOL_TXS_FETCH_LIMIT) {
   const connection = await mongo.connection(MONGO_URL);
   const db = connection.db(OPTIMIST_DB);
-  return db
+  let query = db
     .collection(TRANSACTIONS_COLLECTION)
     .find({ mempool: true }, { _id: 0 })
-    .sort({ fee: -1 })
-    .toArray();
+    .sort({ fee: -1 });
+
+  if (mempoolLimit) {
+    logger.info(`Throttling enabled for pending mempool transactions: ${mempoolLimit}`);
+    query = query.limit(mempoolLimit);
+  }
+
+  return query.toArray();
 }
 
 /**

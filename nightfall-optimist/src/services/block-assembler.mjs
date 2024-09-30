@@ -10,6 +10,7 @@ import logger from 'common-files/utils/logger.mjs';
 import { waitForTimeout } from 'common-files/utils/utils.mjs';
 import constants from 'common-files/constants/index.mjs';
 import { waitForContract } from 'common-files/utils/contract.mjs';
+import v8 from 'v8';
 import { removeTransactionsFromMemPool, getMempoolTransactionsSortedByFee } from './database.mjs';
 import Block from '../classes/block.mjs';
 import { Transaction } from '../classes/index.mjs';
@@ -21,6 +22,7 @@ import {
 
 const { MAX_BLOCK_SIZE, MINIMUM_TRANSACTION_SLOTS, PROPOSER_MAX_BLOCK_PERIOD_MILIS } = config;
 const { STATE_CONTRACT_NAME } = constants;
+const MAX_MEMORY_USAGE_PERCENTAGE = 0.7; // Max mem usage of the heap
 
 let ws;
 let makeNow = false;
@@ -42,6 +44,27 @@ export function setBlockPeriodMs(timeMs) {
 
 export function setEnableHeartBeatLogging(flagValue) {
   enableHeartBeatLogging = flagValue;
+}
+
+export function getMemoryUsage() {
+  const { heapUsed, heapTotal } = v8.getHeapStatistics();
+  return heapUsed / heapTotal;
+}
+
+export function calculateMempoolLimit(mempoolTransactions, mempoolTransactionSizes) {
+  const currentMemoryUsage = getMemoryUsage();
+  const availableMemoryPercentage = MAX_MEMORY_USAGE_PERCENTAGE - currentMemoryUsage;
+  if (availableMemoryPercentage <= 0) return 0;
+
+  const totalBytes = mempoolTransactionSizes.reduce((acc, curr) => acc + curr, 0);
+  if (totalBytes === 0 || mempoolTransactions.length === 0) return 0;
+
+  const averageTransactionSize = totalBytes / mempoolTransactions.length;
+
+  const availableMemoryBytes = availableMemoryPercentage * v8.getHeapStatistics().heap_size_limit;
+  const estimatedMempoolLimit = Math.floor(availableMemoryBytes / averageTransactionSize);
+
+  return estimatedMempoolLimit;
 }
 
 /**
@@ -98,8 +121,14 @@ export async function conditionalMakeBlock(proposer) {
       });
     }
 
+    const mempoolLimit = calculateMempoolLimit();
+    if (mempoolLimit === 0) {
+      logger.warn('Memory usage too high. Skipping block assembly.');
+      return;
+    }
+
     // Get all the mempool transactions sorted by fee
-    const mempoolTransactions = await getMempoolTransactionsSortedByFee();
+    const mempoolTransactions = await getMempoolTransactionsSortedByFee(mempoolLimit);
 
     // Map each mempool transaction to their byte size
     const mempoolTransactionSizes = mempoolTransactions.map(tx => {
