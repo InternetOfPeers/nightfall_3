@@ -52,19 +52,24 @@ export function getMemoryUsage() {
 }
 
 export function calculateMempoolLimit(mempoolTransactions, mempoolTransactionSizes) {
-  const currentMemoryUsage = getMemoryUsage();
-  const availableMemoryPercentage = MAX_MEMORY_USAGE_PERCENTAGE - currentMemoryUsage;
-  if (availableMemoryPercentage <= 0) return 0;
+  try {
+    const currentMemoryUsage = getMemoryUsage();
+    const availableMemoryPercentage = MAX_MEMORY_USAGE_PERCENTAGE - currentMemoryUsage;
+    if (availableMemoryPercentage <= 0) return 0;
 
-  const totalBytes = mempoolTransactionSizes.reduce((acc, curr) => acc + curr, 0);
-  if (totalBytes === 0 || mempoolTransactions.length === 0) return 0;
+    const totalBytes = mempoolTransactionSizes.reduce((acc, curr) => acc + curr, 0);
+    if (totalBytes === 0 || mempoolTransactions.length === 0) return 0;
 
-  const averageTransactionSize = totalBytes / mempoolTransactions.length;
+    const averageTransactionSize = totalBytes / mempoolTransactions.length;
 
-  const availableMemoryBytes = availableMemoryPercentage * v8.getHeapStatistics().heap_size_limit;
-  const estimatedMempoolLimit = Math.floor(availableMemoryBytes / averageTransactionSize);
+    const availableMemoryBytes = availableMemoryPercentage * v8.getHeapStatistics().heap_size_limit;
+    const estimatedMempoolLimit = Math.floor(availableMemoryBytes / averageTransactionSize);
 
-  return estimatedMempoolLimit;
+    return estimatedMempoolLimit;
+  } catch (err) {
+    logger.error(err, 'Err in calculateMempoolLimit');
+    return undefined;
+  }
 }
 
 /**
