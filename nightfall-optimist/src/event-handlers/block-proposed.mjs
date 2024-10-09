@@ -25,7 +25,7 @@ import { increaseBlockInvalidCounter } from '../services/debug-counters.mjs';
 import { syncState } from '../services/state-sync.mjs';
 import Proposer from '../classes/proposer.mjs';
 
-const { TIMBER_HEIGHT, HASH_TYPE } = config;
+const { TIMBER_HEIGHT, HASH_TYPE, CHALLENGER_ENABLED } = config;
 const { ZERO } = constants;
 
 let ws;
@@ -158,6 +158,7 @@ async function blockProposedEventHandler(data) {
     if (queues[2].length === 0) await checkBlock(block, transactions);
     logger.info('Block Checker - Block was valid');
   } catch (err) {
+    const isChallengerEnabled = CHALLENGER_ENABLED === 'true';
     if (err instanceof BlockError) {
       logger.warn(`Block Checker - Block invalid, with code ${err.code}! ${err.message}`);
       logger.info(`Block is invalid, stopping any block production`);
@@ -173,14 +174,19 @@ async function blockProposedEventHandler(data) {
         timeBlockL2,
         ...block,
       });
-      const txDataToSign = await createChallenge(block, transactions, err);
-      // push the challenge into the stop queue.  This will stop blocks being
-      // made until the challenge has run and a rollback has happened.  We could
-      // push anything into the queue and that would work but it's useful to
-      // have the actual challenge to support syncing
-      logger.debug('enqueuing event to stop queue');
-      await enqueueEvent(commitToChallenge, 2, txDataToSign);
-      await commitToChallenge(txDataToSign);
+
+      if (isChallengerEnabled) {
+        const txDataToSign = await createChallenge(block, transactions, err);
+        // push the challenge into the stop queue.  This will stop blocks being
+        // made until the challenge has run and a rollback has happened.  We could
+        // push anything into the queue and that would work but it's useful to
+        // have the actual challenge to support syncing
+        logger.debug('enqueuing event to stop queue');
+        await enqueueEvent(commitToChallenge, 2, txDataToSign);
+        await commitToChallenge(txDataToSign);
+      } else {
+        logger.debug('Invalid block detected, but challenger is disabled. Skipping challenge.');
+      }
     } else {
       logger.error(err.stack);
       throw new Error(err);

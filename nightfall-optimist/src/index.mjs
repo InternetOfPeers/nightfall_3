@@ -36,10 +36,11 @@ const main = async () => {
 
     // enqueue the block-assembler every time the queue becomes empty
     queues[0].on('end', () => {
+      logger.debug('Block assembler is empty. Preparing for next round of assembly.');
       // We do the proposer isMe check here to fail fast instead of re-enqueing.
       // We check if the queue[2] is empty, this is safe it is manually enqueued/dequeued.
       if (proposer.isMe && queues[2].length === 0) {
-        // logger.debug('Queue has emptied. Queueing block assembler.');
+        logger.debug('Queue has emptied. Queueing block assembler.');
         return enqueueEvent(conditionalMakeBlock, 0, proposer);
       }
       // eslint-disable-next-line no-void, no-useless-return

@@ -218,6 +218,7 @@ module.exports = {
   MINIMUM_TRANSACTION_SLOTS: 16,
   MAX_BLOCK_SIZE: Number(process.env.MAX_BLOCK_SIZE) || 50000,
   MEMPOOL_TXS_FETCH_LIMIT: Number(process.env.MEMPOOL_TXS_FETCH_LIMIT) || 5,
+  CHALLENGER_ENABLED: process.env.CHALLENGER_ENABLED || 'false',
   RETRIES: Number(process.env.AUTOSTART_RETRIES) || 100,
   VK_IDS: {
     deposit: {
