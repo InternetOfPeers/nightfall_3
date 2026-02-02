@@ -19,12 +19,17 @@ const { ZERO, STATE_CONTRACT_NAME } = constants;
  */
 async function transactionSubmittedEventHandler(eventParams) {
   const { offchain = false, ...data } = eventParams;
+
   let transaction;
   if (offchain) {
+    logger.info('[TX-SUBMITTED] Processing offchain transaction');
     transaction = data;
     transaction.blockNumber = 'offchain';
     transaction.transactionHashL1 = 'offchain';
   } else {
+    logger.info(
+      `[TX-SUBMITTED] TransactionSubmitted event handler called for txHash: ${data.transactionHash}, blockNumber: ${data.blockNumber}`,
+    );
     transaction = await getTransactionSubmittedCalldata(data);
     transaction.blockNumber = data.blockNumber;
     transaction.transactionHashL1 = data.transactionHash;
@@ -65,6 +70,9 @@ async function transactionSubmittedEventHandler(eventParams) {
     );
     try {
       await saveTransaction({ ...transaction });
+      logger.info(
+        `[TX-SUBMITTED] Transaction saved to mempool - txHash: ${transaction.transactionHashL1}, L2Hash: ${transaction.transactionHash}`,
+      );
     } catch (err) {
       if (err.message.includes('E11000'))
         logger.warn(

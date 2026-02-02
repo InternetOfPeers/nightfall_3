@@ -16,8 +16,9 @@ async function setupContracts() {
   const challengesContract = await getContractInstance('Challenges');
   const stateContract = await getContractInstance('State');
   const stateAddress = stateContract.options.address;
-  const simpleMultiSigAddress = (await getContractInstance('SimpleMultiSig')).options.address;
   logger.debug(`address of State contract is ${stateAddress}`);
+  const simpleMultiSigAddress = (await getContractInstance('SimpleMultiSig')).options.address;
+  logger.debug(`address of Multisig contract is ${simpleMultiSigAddress}`);
 
   const contractsState = [proposersContract, shieldContract, challengesContract];
   const contractsOwnables = [proposersContract, shieldContract, challengesContract, stateContract];
@@ -37,7 +38,11 @@ async function setupContracts() {
   // transfer ownership
   // Need to call transferOwnership 1 by 1 or transaction fails
   try {
+    logger.debug('Transferring ownership of contracts to the Multisig contract');
     for (const contractOwnable of contractsOwnables) {
+      logger.debug(
+        `Transferring ownership of contract at address ${contractOwnable.options.address}`,
+      );
       const transferOwnership = contractOwnable.methods.transferOwnership(simpleMultiSigAddress);
       if (!config.ETH_PRIVATE_KEY) {
         logger.warn(
@@ -52,7 +57,9 @@ async function setupContracts() {
         logger.debug(`Got receipt with transaction hash ${rec.transactionHash}`);
       }
     }
-    logger.debug('Ownership has been transferred to the Multisig contract');
+    logger.debug(
+      `Ownership has been transferred to the Multisig contract: ${simpleMultiSigAddress}`,
+    );
   } catch (err) {
     logger.error(`Transfer of ownership returned an error ${err}`);
   }

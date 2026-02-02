@@ -1,4 +1,3 @@
-version: '3.5'
 # Use this script for running up nightfall_3 in 'developer' mode with local
 # bindings and expects a pre-existing blockchain client on localhost.
 # Use it as an override file for docker-compose.yml

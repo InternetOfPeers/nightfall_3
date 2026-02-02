@@ -66,28 +66,50 @@ async function checkAndChangeProposer(nf3) {
  * check that proposer is registered and register if its not
  */
 async function checkAndRegisterProposer(nf3, proposerBaseUrl) {
+  let hasRegisteredWithOptimist = false; // Track if we've done initial registration
+
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
       const { proposers } = await nf3.getProposers();
       const thisProposer = proposers.filter(p => p.thisAddress === nf3.ethereumAddress);
-      if (!thisProposer.length) {
-        logger.info('Attempting to register proposer');
-        const blockStake = await nf3.getBlockStake();
-        const minimumStake = await nf3.getMinimumStake();
+      logger.info(`Current registered proposers: ${proposers.length}`);
+      logger.info(`Ethereum address: ${nf3.ethereumAddress}`);
 
-        logger.info(`blockStake: ${blockStake}, minimumStake: ${minimumStake}`);
-
+      // Register with optimist ONLY on first run to set isMe flag
+      if (!hasRegisteredWithOptimist) {
+        logger.info('Registering with optimist to ensure isMe flag is set correctly...');
         try {
-          await nf3.registerProposer(proposerBaseUrl, minimumStake);
+          await nf3.registerProposer(proposerBaseUrl, 0);
+          logger.info(
+            'Successfully registered with optimist. Optimist should now have isMe=true and queue should restart.',
+          );
+          hasRegisteredWithOptimist = true; // Mark as complete
+        } catch (err) {
+          logger.warn(`Error registering with optimist: ${err.message}`);
+        }
+      }
+
+      // Then check if we need on-chain registration
+      if (!thisProposer.length) {
+        const blockStake = await nf3.getBlockStake();
+        logger.info(`Attempting to register proposer on L2 block number: ${blockStake}`);
+        const minimumStake = await nf3.getMinimumStake();
+        logger.info(`minimumStake required to register (in tinybars): ${minimumStake}`);
+        const minimumStakeWeibars = minimumStake * 1e10;
+        logger.info(`minimumStake required to register (in weibars): ${minimumStakeWeibars}`);
+        try {
+          await nf3.registerProposer(proposerBaseUrl, minimumStakeWeibars);
         } catch (err) {
           logger.info(
             `Error registering proposer ${proposerBaseUrl} with error message ${err.message}`,
           );
+          process.exit(1);
         }
       }
     } catch (err) {
       logger.info(`Error during checkAndRegisterProposer with error message ${err.message}`);
+      process.exit(1);
     }
 
     await waitForTimeout(CHECK_REGISTER_PROPOSER_SECOND * 1000);
@@ -127,9 +149,14 @@ export default async function startProposer(nf3, proposerBaseUrl) {
         const stakeAccount = await nf3.getProposerStake();
         const blockStake = await nf3.getBlockStake();
         const minimumStake = await nf3.getMinimumStake();
+        // Convert to weibars for logging purposes
+        const minimumStakeWeibars = minimumStake * 1e10;
+        logger.info(
+          `Proposer stake is ${stakeAccount.amount}, block stake is ${blockStake}, minimum stake is ${minimumStakeWeibars} weibars (${minimumStake} tinybars)`,
+        );
         if (stakeAccount.amount <= blockStake) {
           logger.info('Updating the stake...');
-          await nf3.updateProposer(proposerBaseUrl, minimumStake, 0);
+          await nf3.updateProposer(proposerBaseUrl, minimumStakeWeibars, 0);
           logger.info('Stake updated!!!!!');
         }
       }

@@ -17,6 +17,9 @@ const main = async () => {
   // it will just return a 400
   app.listen(process.env.CLIENT_SERVER_PORT || 80);
   app.set('isSyncing', true);
+  logger.info(
+    '[CLIENT-SYNC] Client starting - isSyncing set to TRUE. Requests will be blocked until sync completes.',
+  );
   try {
     if (process.env.ENABLE_QUEUE) {
       await rabbitmq.connect();
@@ -27,7 +30,11 @@ const main = async () => {
     await checkContractsABI();
     await startEventQueue(queueManager, eventHandlers);
     await pauseQueue(0);
+    logger.info('[CLIENT-SYNC] Starting initial blockchain sync...');
     initialClientSync().then(() => {
+      logger.info(
+        '[CLIENT-SYNC] Sync complete! Setting isSyncing to FALSE. Client is now ready to accept requests.',
+      );
       app.set('isSyncing', false);
       unpauseQueue(0);
     });

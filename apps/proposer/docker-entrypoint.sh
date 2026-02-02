@@ -7,7 +7,9 @@ while ! nc -z ${OPTIMIST_HOST:-optimist} ${OPTIMIST_PORT:-80}; do sleep 3; done
 
 sleep 5
 
-# wait to finish deployer
-while ping -q -c 1 ${DEPLOYER_HOST:-deployer} >/dev/null ; do sleep 5; done
+# wait to finish deployer (skip if DEPLOYER_HOST is not set or empty)
+if [ -n "${DEPLOYER_HOST}" ]; then
+  while ping -q -c 1 ${DEPLOYER_HOST} >/dev/null ; do sleep 5; done
+fi
 
 exec "$@"

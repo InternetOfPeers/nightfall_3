@@ -1,4 +1,3 @@
-version: '3.5'
 services:
   # the services 'administrator', 'client' & 'worker' are added here for sharing the filesystem volume.
   administrator:
@@ -35,7 +34,7 @@ services:
       - rabbitmq
       - mongodb
     environment:
-      AUTHENTICATION_KEY: ${AUTHENTICATION_KEY}    
+      AUTHENTICATION_KEY: ${AUTHENTICATION_KEY}
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-600}
       BLOCKCHAIN_URL: ${BLOCKCHAIN_URL:?BLOCKCHAIN_URL-cannot-be-blank}
       CIRCOM_WORKER_HOST: ${CIRCOM_WORKER_HOST:-worker}
@@ -56,7 +55,8 @@ services:
       RABBITMQ_PORT: ${RABBITMQ_PORT:-5672}
       STATE_GENESIS_BLOCK: ${STATE_GENESIS_BLOCK:-0}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
-    command: ['npm', 'run', 'start']
+      CONFIRMATIONS: ${CONFIRMATIONS}
+    command: [ 'npm', 'run', 'start' ]
 
   deployer:
     image: ghcr.io/eyblockchain/nightfall3-deployer:latest
@@ -69,6 +69,7 @@ services:
       - nightfall_network
     volumes:
       - ./volumes/build:/app/build/
+      - ./volumes/artifacts:/app/artifacts/
     environment:
       ALWAYS_DO_TRUSTED_SETUP: ${ALWAYS_DO_TRUSTED_SETUP}
       BLOCKCHAIN_URL: ${BLOCKCHAIN_URL:?BLOCKCHAIN_URL-cannot-be-blank}
@@ -82,6 +83,7 @@ services:
       ETH_PRIVATE_KEY: ${ETH_PRIVATE_KEY:?ETH_PRIVATE_KEY-cannot-be-blank}
       ETH_NETWORK: ${ETH_NETWORK:?ETH_NETWORK-cannot-be-blank}
       FEE_L2_TOKEN_ID: ${FEE_L2_TOKEN_ID:?FEE_L2_TOKEN_ID-cannot-be-blank}
+      FEE_L2_TOKEN_ADDRESS: ${FEE_L2_TOKEN_ADDRESS}
       GAS: ${GAS}
       GAS_PRICE: ${GAS_PRICE}
       GAS_ESTIMATE_ENDPOINT: ${GAS_ESTIMATE_ENDPOINT}
@@ -89,11 +91,13 @@ services:
       MULTISIG_APPROVERS: ${MULTISIG_APPROVERS?MULTISIG_APPROVERS-not-set}
       MULTISIG_SIGNATURE_THRESHOLD: ${MULTISIG_SIGNATURE_THRESHOLD:?MULTISIG_SIGNATURE_THRESHOLD-cannot-be-blank}
       MATIC_RESTRICT: ${MATIC_RESTRICT}
+      WHBAR_RESTRICT: ${WHBAR_RESTRICT}
       SKIP_DEPLOYMENT: ${SKIP_DEPLOYMENT:-false}
       UPGRADE: ${UPGRADE_CONTRACTS}
       USDC_RESTRICT: ${USDC_RESTRICT}
       WHITELISTING: ${WHITELISTING?WHITELISTING-not-set}
-      
+      CONFIRMATIONS: ${CONFIRMATIONS}
+
   mongodb:
     image: mongo:4.4.1-bionic
     hostname: mongodb
@@ -143,7 +147,7 @@ services:
       PROPOSER_MAX_BLOCK_PERIOD_MILIS: ${PROPOSER_MAX_BLOCK_PERIOD_MILIS:-0}
       USE_EXTERNAL_NODE: ${USE_EXTERNAL_NODE}
       WEBSOCKET_PORT: 8080
-    command: ['npm', 'run', 'start']
+    command: [ 'npm', 'run', 'start' ]
 
   worker:
     image: ghcr.io/eyblockchain/nightfall3-worker:latest
@@ -161,7 +165,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-debug}
       LOG_HTTP_PAYLOAD_ENABLED: ${LOG_HTTP_PAYLOAD_ENABLED:-true}
       LOG_HTTP_FULL_DATA: ${LOG_HTTP_FULL_DATA:-false}
-    command: ['npm', 'run', 'start']
+    command: [ 'npm', 'run', 'start' ]
 
 volumes:
   mongodb:

@@ -250,8 +250,8 @@ async function blockProposedEventHandler(data, syncing) {
   }
 
   // Send finalization details via webhook optionally, if CALL_WEBHOOK_ON_CONFIRMATION
-  // is enabled
-  if (CALL_WEBHOOK_ON_CONFIRMATION) {
+  // is enabled. Skip during initial sync to speed up startup.
+  if (CALL_WEBHOOK_ON_CONFIRMATION && !syncing) {
     if (!WEBHOOK_PATH) {
       throw new Error('WEBHOOK_PATH is not set');
     }
@@ -273,6 +273,8 @@ async function blockProposedEventHandler(data, syncing) {
     } catch (err) {
       logger.error(`ERROR: Calling webhook ${JSON.stringify(err)}`);
     }
+  } else if (CALL_WEBHOOK_ON_CONFIRMATION && syncing) {
+    logger.debug('[CLIENT-SYNC] Skipping webhook call during initial sync');
   }
 }
 

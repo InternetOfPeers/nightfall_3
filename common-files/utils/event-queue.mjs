@@ -148,6 +148,10 @@ async function dequeueEvent(priority) {
 }
 
 async function queueManager(eventObject, eventArgs) {
+  logger.debug(
+    `[QUEUE] queueManager called for event: ${eventObject.event}, removed: ${eventObject.removed}, txHash: ${eventObject.transactionHash}`,
+  );
+
   if (eventObject.removed) {
     /*
       in this model we don't queue removals but we can use them to reject the event
@@ -155,6 +159,7 @@ async function queueManager(eventObject, eventArgs) {
       Also note that we can get more than one removal because the event could be re-mined
       and removed again - so we need to keep count of the removals.
      */
+    logger.info(`[QUEUE] Event removal detected for txHash: ${eventObject.transactionHash}`);
     if (!removed[eventObject.transactionHash]) removed[eventObject.transactionHash] = 0;
     removed[eventObject.transactionHash]++; // store the removal; waitForConfirmation will read this and reject.
     return;
@@ -174,10 +179,11 @@ async function queueManager(eventObject, eventArgs) {
   const priority = eventHandlers.priority[eventObject.event];
 
   logger.info({
-    msg: 'Queueing event',
+    msg: '[QUEUE] Queueing event',
     event: eventObject.event,
     transactionHash: eventObject.transactionHash,
     priority,
+    blockNumber: eventObject.blockNumber,
   });
 
   queues[priority].push(async () => {

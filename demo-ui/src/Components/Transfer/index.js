@@ -5,18 +5,20 @@ import './index.css';
 function Transfer({ users, updateLoader, erc20Address }) {
   const [transferValue, setTransferValue] = React.useState();
   const [receipent, setReceipent] = React.useState('');
+  const [offchain, setOffchain] = React.useState(false);
+  const currentUser = users.find(user => user.isCurrent);
   function doTransfer(e) {
     e.preventDefault();
 
-    if (!users[0]) return;
+    if (!users[0] || !currentUser) return;
     if (receipent === '') return;
 
     updateLoader(true);
-    const [{ nf3Object }] = users.filter(user => user.isCurrent);
+    const { nf3Object } = currentUser;
 
     nf3Object
       .transfer(
-        false,
+        offchain,
         erc20Address,
         'ERC20',
         Number(transferValue),
@@ -56,6 +58,20 @@ function Transfer({ users, updateLoader, erc20Address }) {
               <option value="0">{users[0] && users[0].name}</option>
               <option value="1">{users[1] && users[1].name}</option>
             </select>
+          </div>
+          <div className="form-group form-custom-field">
+            <div className="form-check">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="offchainTransfer"
+                checked={offchain}
+                onChange={e => setOffchain(e.target.checked)}
+              />
+              <label className="form-check-label" htmlFor="offchainTransfer">
+                Offchain (instant transfer)
+              </label>
+            </div>
           </div>
           <div className="form-group form-custom-field">
             <button type="button" className="btn btn-primary" onClick={doTransfer}>

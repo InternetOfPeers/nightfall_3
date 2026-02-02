@@ -1,5 +1,5 @@
 # build circom from source for local verify
-FROM rust:1.53.0-slim as builder
+FROM rust:1.70-slim AS builder
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

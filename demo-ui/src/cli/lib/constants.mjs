@@ -24,3 +24,4 @@ export const GAS_PRICE = process.env.GAS_PRICE || '10000000000';
 export const { GAS_ESTIMATE_ENDPOINT } = process.env;
 export const DEFAULT_MIN_L1_WITHDRAW = 1; // minimum l1 balance in wei required for withdraw from State contract
 export const DEFAULT_MIN_L2_WITHDRAW = 1; // minimum l2 erc20 token balance required for withdraw from State contract
+export const CONFIRMATIONS = Number(process.env.CONFIRMATIONS) || 1;

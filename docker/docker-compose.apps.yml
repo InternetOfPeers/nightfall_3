@@ -1,4 +1,3 @@
-version: '3.5'
 # Use this script for making nightfall_3 use stubs.
 services:
   proposer:
@@ -11,7 +10,7 @@ services:
     ports:
       # to use with postman and etc
       - 8092:8092
-    command: ['npm', 'run', 'dev']
+    command: [ 'npm', 'run', 'dev' ]
     environment:
       AUTOSTART_RETRIES: ${AUTOSTART_RETRIES:-100}
       BLOCKCHAIN_WS_HOST: ${BLOCKCHAIN_WS_HOST:-blockchain}
@@ -34,7 +33,8 @@ services:
       PROPOSER_KEY: ${PROPOSER_KEY}
       CHALLENGER_KEY: ${CHALLENGER_KEY}
       ENABLE_CHECK_AND_CHANGE_PROPOSER: true
-      # CHECK_REGISTER_PROPOSER_SECOND: 3600
+      CHECK_REGISTER_PROPOSER_SECOND: ${CHECK_REGISTER_PROPOSER_SECOND:-60}
+      TIMER_CHANGE_PROPOSER_SECOND: ${TIMER_CHANGE_PROPOSER_SECOND:-120}
     networks:
       - nightfall_network
     volumes:

@@ -35,6 +35,15 @@ async function newCurrentProposerEventHandler(data, args) {
     // !! converts this to a "is not null" check - i.e. false if is null
     // are we the next proposer?
     proposer.isMe = !!(await isRegisteredProposerAddressMine(currentProposer));
+
+    logger.info(
+      `[PROPOSER] Proposer status updated - address: ${currentProposer}, isMe: ${proposer.isMe}, weWereLastProposer: ${weWereLastProposer}`,
+    );
+    if (proposer.isMe) {
+      logger.info('[PROPOSER] This optimist IS the current proposer! Block assembly will begin.');
+    } else {
+      logger.info('[PROPOSER] This optimist is NOT the current proposer. Will not create blocks.');
+    }
   } catch (err) {
     // handle errors
     logger.error(err);

@@ -28,7 +28,7 @@ router.post('/check', async (req, res, next) => {
 
 router.post('/make-now', async (req, res, next) => {
   try {
-    logger.debug(`block make-now endpoint received GET`);
+    logger.debug('[MAKE-NOW] Setting makeNow flag to trigger immediate block creation');
     setMakeNow();
     res.send('Making short block');
   } catch (err) {

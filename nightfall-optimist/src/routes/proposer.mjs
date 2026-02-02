@@ -44,19 +44,22 @@ export function setProposer(p) {
 router.post('/register', async (req, res, next) => {
   try {
     const { address, url = '', fee = 0 } = req.body;
+    logger.info(`[PROPOSER-REG] Registration request - address: ${address}, url: ${url}`);
     if (url === '') {
       throw new Error('Rest API URL not provided');
     }
     const proposersContractInstance = await waitForContract(PROPOSERS_CONTRACT_NAME);
     // the first thing to do is to check if the proposer is already registered on the blockchain
     const proposers = (await getProposers()).map(p => p.thisAddress);
+    logger.info(`[PROPOSER-REG] Proposers on blockchain: ${JSON.stringify(proposers)}`);
     // if not, let's register it
     let txDataToSign = '';
     if (!proposers.includes(address)) {
+      logger.info(`[PROPOSER-REG] Address NOT on blockchain yet - would need registration tx`);
       txDataToSign = await proposersContractInstance.methods.registerProposer(url, fee).encodeABI();
     } else {
       logger.warn(
-        'Proposer was already registered on the blockchain - registration attempt ignored',
+        '[PROPOSER-REG] Proposer was already registered on the blockchain - registration attempt ignored',
       );
     }
 
@@ -67,10 +70,15 @@ router.post('/register', async (req, res, next) => {
      */
     const stateContractInstance = await waitForContract(STATE_CONTRACT_NAME);
     const currentProposer = await stateContractInstance.methods.getCurrentProposer().call();
-    if (!(await isRegisteredProposerAddressMine(address))) {
-      logger.debug('Registering proposer locally');
+    const isAlreadyRegisteredLocally = await isRegisteredProposerAddressMine(address);
+    logger.info(
+      `[PROPOSER-REG] Current proposer from blockchain: ${JSON.stringify(
+        currentProposer,
+      )} Is already registered locally? ${isAlreadyRegisteredLocally}`,
+    );
+    if (!isAlreadyRegisteredLocally) {
+      logger.debug('[PROPOSER-REG] Registering proposer locally in database');
       await setRegisteredProposerAddress(address, url); // save the registration address
-
       /*
         We've just registered with optimist but if we were already registered on the blockchain,
         we should check if we're the current proposer and, if so, set things up so we start
@@ -78,20 +86,39 @@ router.post('/register', async (req, res, next) => {
        */
       if (txDataToSign === '') {
         logger.warn(
-          'Proposer was already registered on the blockchain but not with this Optimist instance - registering locally',
+          '[PROPOSER-REG] Proposer was already registered on the blockchain but not with this Optimist instance - registering locally',
         );
         if (address === currentProposer.thisAddress) {
+          logger.info(
+            '[PROPOSER-REG] This proposer IS the current proposer! Setting isMe=true and kickstarting queue.',
+          );
           proposer.isMe = true;
-          await enqueueEvent(() => logger.info('Start Queue'), 0); // kickstart the queue
+          proposer.address = address;
+          await enqueueEvent(
+            () =>
+              logger.info('[PROPOSER-REG] Kickstart job - queue will fire end event after this'),
+            0,
+          ); // kickstart the queue
+        } else {
+          logger.info(
+            '[PROPOSER-REG] Proposer registered but is NOT current proposer yet. isMe remains false.',
+          );
         }
       }
     } else if (address === currentProposer.thisAddress && !proposer.isMe) {
       logger.warn(
-        'Proposer was already registered on the blockchain and with this Optimist instance, but proposer flag wasnt set - setting isMe flag',
+        `[PROPOSER-REG] Proposer ${address} was already registered on the blockchain and with this Optimist instance, but proposer flag wasnt set - setting isMe flag`,
       );
       proposer.isMe = true;
       proposer.address = address;
-      await enqueueEvent(() => logger.info('Start Queue'), 0); // kickstart the queue
+      await enqueueEvent(
+        () => logger.info('[PROPOSER-REG] Kickstart job - queue will fire end event after this'),
+        0,
+      ); // kickstart the queue
+    } else {
+      logger.info(
+        `[PROPOSER-REG] Skipping - already registered locally. address=${address}, currentProposer=${currentProposer.thisAddress}, proposer.isMe=${proposer.isMe}`,
+      );
     }
     res.json({ txDataToSign });
   } catch (err) {

@@ -30,7 +30,7 @@ const SUPPORTED_ENVIRONMENTS = {
     clientApiUrl: 'http://localhost:8080',
     optimistApiUrl: 'http://localhost:8081',
     optimistWsUrl: 'ws://localhost:8082',
-    web3WsUrl: 'ws://localhost:8546',
+    web3WsUrl: 'http://localhost:7546',
   },
   docker: {
     name: 'Docker',

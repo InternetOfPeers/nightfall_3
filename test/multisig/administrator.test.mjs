@@ -218,7 +218,10 @@ describe(`Testing Administrator`, () => {
 
     it('Allowing register first proposer', async () => {
       if (config.ENVIRONMENT !== 'aws') {
-        const res = await proposers[0].registerProposer('http://localhost:8081', minimumStakeDef);
+        const res = await proposers[0].registerProposer(
+          'http://localhost:8081',
+          minimumStakeDef * 1e10,
+        );
         expectTransaction(res);
       }
     });
@@ -226,7 +229,10 @@ describe(`Testing Administrator`, () => {
     it('Not allowing register second proposer', async () => {
       let error = null;
       try {
-        const res = await proposers[1].registerProposer('http://localhost:8081', minimumStakeDef);
+        const res = await proposers[1].registerProposer(
+          'http://localhost:8081',
+          minimumStakeDef * 1e10,
+        );
         expectTransaction(res);
       } catch (err) {
         error = err;
@@ -258,7 +264,10 @@ describe(`Testing Administrator`, () => {
     });
 
     it('Allowing register second proposer', async () => {
-      const res = await proposers[1].registerProposer('http://localhost:8081', minimumStakeDef);
+      const res = await proposers[1].registerProposer(
+        'http://localhost:8081',
+        minimumStakeDef * 1e10,
+      );
       expectTransaction(res);
     });
 
@@ -652,11 +661,15 @@ describe(`Testing Administrator`, () => {
   });
 
   after(async () => {
-    nf3User.close();
+    console.log('Cleaning up proposers...');
+    // await nf3User.close();
+    console.log('Deregistering proposers...');
     if (config.ENVIRONMENT !== 'aws') {
       await proposers[0].deregisterProposer();
     }
-    proposers[0].close();
-    proposers[1].close();
+    console.log('Closing proposer connections...1');
+    // await proposers[0].close();
+    console.log('Closing proposer connections...2');
+    // await proposers[1].close();
   });
 });

@@ -8,9 +8,9 @@ services:
       dockerfile: docker/deployer.Dockerfile
       context: ..
     volumes:
-      - type: volume
-        source: build
-        target: /app/build/
+      - type: bind
+        source: ./volumes/build
+        target: /app/build
       - type: bind
         source: ../nightfall-deployer/contracts
         target: /app/contracts/
@@ -65,8 +65,8 @@ services:
     ports:
       - 8087:80
     volumes:
-      - type: volume
-        source: proving_files
+      - type: bind
+        source: ./volumes/proving_files
         target: /app/public/
 
   worker:
@@ -75,9 +75,9 @@ services:
       dockerfile: docker/worker.Dockerfile
       context: ..
     volumes:
-      - type: volume
-        source: proving_files
-        target: /app/output/
+      - type: bind
+        source: ./volumes/proving_files
+        target: /app/public/
       - type: bind
         source: ../common-files/test
         target: /common-files/test
@@ -106,8 +106,8 @@ services:
       context: ..
     container_name: client_1
     volumes:
-      - type: volume
-        source: build
+      - type: bind
+        source: ./volumes/build
         target: /app/build
     networks:
       - nightfall_network
@@ -142,8 +142,8 @@ services:
       context: ..
     container_name: client_2
     volumes:
-      - type: volume
-        source: build
+      - type: bind
+        source: ./volumes/build
         target: /app/build
       - type: bind
         source: ../test/adversary/bad-client/src
@@ -198,9 +198,9 @@ services:
       # websocket port for Optimist is on localhost:9090
       - 9090:8080
     volumes:
-      - type: volume
-        source: build
-        target: /app/build/
+      - type: bind
+        source: ./volumes/build
+        target: /app/build
     environment:
       ENVIRONMENT: ${ENVIRONMENT:-localhost}
       WEBSOCKET_PORT: ${WEBSOCKET_PORT:-8080}
@@ -232,9 +232,9 @@ services:
       # websocket port for Optimist is on localhost:9092
       - 9092:8080
     volumes:
-      - type: volume
-        source: build
-        target: /app/build/
+      - type: bind
+        source: ./volumes/build
+        target: /app/build
       - type: bind
         source: ../test/adversary/lazy-optimist/src
         target: /app/src

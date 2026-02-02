@@ -54,13 +54,13 @@ trap "docker-compose $FILE $DEV $ADVERSARY -p 'nightfall_3' down --remove-orphan
 
 docker-compose -f docker/docker-compose.yml $FILE $DEV $ADVERSARY -p 'nightfall_3' down --remove-orphans
 
-# if-else block checks - volume exist and then removes it.
-if [[ $(echo $VOLUME_LIST | grep nightfall_3_mongodb) ]]; then
-  echo -n 'Removing '
-  docker volume rm nightfall_3_mongodb
-fi
-
+# If NO_REMOVE is not set, remove the volumes. This is useful for development when you want to keep the volumes around and not have to re-seed the databases every time you restart the environment.
 if [ -z "$NO_REMOVE" ]; then 
+
+  if [[ $(echo $VOLUME_LIST | grep nightfall_3_mongodb) ]]; then
+    echo -n 'Removing '
+    docker volume rm nightfall_3_mongodb
+  fi
 
   if [[ $(echo $VOLUME_LIST | grep nightfall_3_mongodb2) ]]; then
     echo -n 'Removing '
@@ -97,6 +97,7 @@ if [ -z "$NO_REMOVE" ]; then
     docker volume rm nightfall_3_dag1
   fi
 
+  # Check if the DEV environment variable is set and not empty.
   if [ ! -z "$DEV" ]; then
     cd common-files && npm ci && cd ..
   fi

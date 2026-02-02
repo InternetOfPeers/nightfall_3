@@ -5,6 +5,9 @@ services:
   client:
     volumes:
       - type: bind
+        source: ./volumes/build
+        target: /app/build
+      - type: bind
         source: ../nightfall-client/src
         target: /app/src
       - type: bind
@@ -28,4 +31,4 @@ services:
     ports:
       # to use with postman and etc
       - 8091:80
-    entrypoint: ['npm', 'run', 'start']
+    entrypoint: [ 'npm', 'run', 'start' ]

@@ -6,9 +6,8 @@ function Sidebar({ onChangeTab, tab, users }) {
   const calsses = 'list-group-item list-group-item-action py-2 ripple';
 
   useEffect(() => {
-    console.log('in Sidebar useEffect');
     if (users.length === 2 && tab === 'AddUser') onChangeTab('Deposit');
-  });
+  }, [users.length, tab, onChangeTab]);
 
   return (
     <nav className="collapse d-lg-block sidebar collapse bg-white">

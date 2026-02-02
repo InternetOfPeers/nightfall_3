@@ -11,6 +11,14 @@ function toHttpUrl(url) {
 
 module.exports = {
     networks: {
+        hedera: {
+            url: toHttpUrl(config.BLOCKCHAIN_URL),
+            accounts: [config.ETH_PRIVATE_KEY],
+            chainId: 296,
+            timeout: 1000000000,
+            gasMultiplier: 2,
+            gas: config.WEB3_OPTIONS.gas,
+        },
         blockchain: {
             url: 'http://blockchain:8546',
             chainId: 1337, // Any network (default: none)

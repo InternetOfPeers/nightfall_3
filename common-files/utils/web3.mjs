@@ -16,24 +16,30 @@ export default {
   connect() {
     if (this.web3) return this.web3.currentProvider;
 
-    logger.info(`Blockchain Connecting on ${config.BLOCKCHAIN_URL}...`);
+    logger.info(`[WEB3] Blockchain Connecting on ${config.BLOCKCHAIN_URL}...`);
     let provider;
-    if (config.BLOCKCHAIN_URL.includes('http')) {
-      logger.warn('Using the deprecated http provider');
-      provider = new Web3.providers.HttpProvider(
-        config.BLOCKCHAIN_URL,
-        config.WEB3_PROVIDER_OPTIONS,
-      );
-    } else {
+    if (config.BLOCKCHAIN_URL.startsWith('ws://') || config.BLOCKCHAIN_URL.startsWith('wss://')) {
+      logger.info('[WEB3] Using WebSocket provider for real-time event streaming');
       provider = new Web3.providers.WebsocketProvider(
         config.BLOCKCHAIN_URL,
         config.WEB3_PROVIDER_OPTIONS,
       );
-      provider.on('error', err => logger.error(`web3 error: ${err}`));
-      provider.on('connect', () => logger.info('Blockchain Connected ...'));
-      provider.on('end', () => logger.info('Blockchain disconnected'));
+      provider.on('error', err => logger.error(`[WEB3] web3 error: ${err}`));
+      provider.on('connect', () => logger.info('[WEB3] Blockchain Connected via WebSocket'));
+      provider.on('end', () => logger.info('[WEB3] Blockchain disconnected'));
+    } else {
+      logger.warn(
+        '[WEB3] Using HTTP provider - events will be polled periodically (not real-time)',
+      );
+      logger.info(`[WEB3] HTTP Provider URL: ${config.BLOCKCHAIN_URL}`);
+      // Use HTTP provider for http:// or https:// URLs
+      const HTTP_PROVIDER_OPTIONS = {
+        keepAlive: true,
+        timeout: 3600000,
+      };
+      provider = new Web3.providers.HttpProvider(config.BLOCKCHAIN_URL, HTTP_PROVIDER_OPTIONS);
+      logger.info('[WEB3] HTTP provider initialized. Event subscriptions will use polling.');
     }
-
     this.web3 = new Web3(provider);
 
     return provider;
@@ -160,10 +166,13 @@ export default {
     let maxPriorityFeePerGas;
     try {
       const latestBlock = await this.web3.eth.getBlock('latest');
+
+      // TODO: I need to test if I can keep this for the workshop. Comment these out if it causes issues with the provider you are using.
       const feeHistory = await this.web3.eth.getFeeHistory(5, latestBlock.number, [25, 50, 75]);
-      logger.info(feeHistory, 'Fee History');
+      logger.debug(feeHistory, 'Fee History');
       const formattedFeeHistory = this.formatFeeHistory(feeHistory, false, 5);
-      logger.info(formattedFeeHistory, 'Formatted Fee History');
+      logger.debug(formattedFeeHistory, 'Formatted Fee History');
+
       const { baseFeePerGas } = latestBlock;
       logger.info(baseFeePerGas, 'baseFeePerGas');
       maxPriorityFeePerGas = await this.estimatePriorityFeePerGas();
@@ -184,6 +193,9 @@ export default {
       maxPriorityFeePerGas: this.web3.utils.toHex(maxPriorityFeePerGas),
     };
     tx.gas = await this.estimateGas(tx);
+    logger.debug(
+      `Submitting transaction from ${fromAddress.address} to ${contractAddress} with value ${value} and gas ${tx.gas}`,
+    );
     const signed = await this.web3.eth.accounts.signTransaction(tx, config.ETH_PRIVATE_KEY);
     return this.web3.eth.sendSignedTransaction(signed.rawTransaction);
   },

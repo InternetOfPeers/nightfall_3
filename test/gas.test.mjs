@@ -47,11 +47,14 @@ describe('Gas test', () => {
   let gasCost;
   let txPerBlock;
   before(async () => {
+    console.log('Starting Gas tests, initializing proposer');
     await nf3Proposer.init(mnemonics.proposer);
-    await nf3Proposer.registerProposer(
-      'http://localhost:8081',
-      await nf3Proposer.getMinimumStake(),
-    );
+    console.log('Proposer initialized, getting minimum stake');
+    const minimumStake = await nf3Proposer.getMinimumStake();
+    console.log(`Proposer minimum stake is ${minimumStake}`);
+    const minimumStakeTinybars = minimumStake * 1e8;
+    console.log(`Proposer minimum stake in tinybars is ${minimumStakeTinybars}`);
+    await nf3Proposer.registerProposer('http://localhost:8081', minimumStakeTinybars);
 
     // Proposer listening for incoming events
     const newGasBlockEmitter = await nf3Proposer.startProposer();

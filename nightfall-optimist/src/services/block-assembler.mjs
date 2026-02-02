@@ -33,6 +33,9 @@ let blockPeriodMs = PROPOSER_MAX_BLOCK_PERIOD_MILIS;
 
 export function setBlockAssembledWebSocketConnection(_ws) {
   ws = _ws;
+  logger.info(
+    `[WEBSOCKET] Proposer websocket connection established! readyState: ${ws.readyState} (OPEN=1)`,
+  );
 }
 
 export function setMakeNow(_makeNow = true) {
@@ -96,8 +99,8 @@ async function makeBlock(proposer, transactions) {
 }
 
 /**
- * This function will make a block iff I am the proposer and there are enough
- * transactions in the database to assembke a block from. It loops until told to
+ * This function will make a block if I am the proposer and there are enough
+ * transactions in the database to assemble a block from. It loops until told to
  * stop making blocks. It is called from the 'main()' routine to start it, and
  * should not be called from anywhere else because we only want one instance ever
  */
@@ -109,7 +112,16 @@ export async function conditionalMakeBlock(proposer) {
     or we're no-longer the proposer (boo).
    */
   if (enableHeartBeatLogging) {
+    logger.info(
+      `[BLOCK-ASSEMBLER] conditionalMakeBlock called - Current proposer: ${proposer.address}, isMe: ${proposer.isMe}, makeNow: ${makeNow}`,
+    );
     logger.info(`Current proposer: ${proposer.address} is me: ${proposer.isMe}`);
+  }
+
+  if (!proposer.isMe) {
+    logger.warn(
+      `[BLOCK-ASSEMBLER] Skipping block assembly because proposer.isMe=false. This optimist is NOT the current proposer.`,
+    );
   }
 
   if (proposer.isMe) {
@@ -130,6 +142,12 @@ export async function conditionalMakeBlock(proposer) {
 
     // Get all the mempool transactions sorted by fee
     const mempoolTransactions = await getMempoolTransactionsSortedByFee(mempoolLimit);
+
+    if (enableHeartBeatLogging) {
+      logger.info(
+        `[MEMPOOL] Retrieved ${mempoolTransactions.length} transactions from mempool (limit: ${mempoolLimit})`,
+      );
+    }
 
     // Map each mempool transaction to their byte size
     const mempoolTransactionSizes = mempoolTransactions.map(tx => {
@@ -176,9 +194,17 @@ export async function conditionalMakeBlock(proposer) {
 
     if (enableHeartBeatLogging) {
       logger.info({
-        msg: 'The proposer can create the following number of blocks',
+        msg: '[BLOCK-ASSEMBLER] The proposer can create the following number of blocks',
         transactionBatches: transactionBatches.length,
       });
+    }
+
+    if (transactionBatches.length === 0 && enableHeartBeatLogging) {
+      logger.info(
+        `[BLOCK-ASSEMBLER] No blocks to create - totalBytes: ${totalBytes}, makeNow: ${makeNow}, timeSinceLastBlock: ${
+          currentTime - lastBlockTimestamp
+        }ms, blockPeriodMs: ${blockPeriodMs}`,
+      );
     }
 
     if (transactionBatches.length >= 1) {
@@ -190,7 +216,7 @@ export async function conditionalMakeBlock(proposer) {
         the transactions will fail and proposer will lose gas fees
       */
       logger.debug({
-        msg: 'Block Assembler will create blocks at once',
+        msg: '[BLOCK-ASSEMBLER] Block Assembler will create blocks at once',
         numberBlocks: transactionBatches.length,
       });
 
@@ -212,7 +238,7 @@ export async function conditionalMakeBlock(proposer) {
           .reduce((acc, curr) => acc + curr, 0);
 
         logger.info({
-          msg: 'Block Assembler - New Block created',
+          msg: '[BLOCK-ASSEMBLER] New Block created',
           block,
           blockSize,
         });
@@ -229,22 +255,36 @@ export async function conditionalMakeBlock(proposer) {
 
         // check that the websocket exists (it should) and its readyState is OPEN
         // before sending Proposed block. If not wait until the proposer reconnects
+        logger.info(
+          `[WEBSOCKET] Checking websocket connection to proposer - ws exists: ${!!ws}, readyState: ${
+            ws ? ws.readyState : 'N/A'
+          } (OPEN=1)`,
+        );
+
         let count = 0;
         while (!ws || ws.readyState !== WebSocket.OPEN) {
           await waitForTimeout(3000); // eslint-disable-line no-await-in-loop
 
-          logger.warn(`Websocket to proposer is closed. Waiting for proposer to reconnect`);
+          logger.warn(
+            `[WEBSOCKET] Websocket to proposer is closed. Waiting for proposer to reconnect (attempt ${
+              count + 1
+            }/100)`,
+          );
 
           increaseProposerWsClosed();
           if (count++ > 100) {
             increaseProposerWsFailed();
-
-            logger.error(`Websocket to proposer has failed. Returning...`);
+            logger.error(
+              `[WEBSOCKET] Websocket to proposer has failed after 100 attempts. Returning...`,
+            );
             return;
           }
         }
 
         if (ws && ws.readyState === WebSocket.OPEN) {
+          logger.info(
+            `[WEBSOCKET] Sending block to proposer via websocket - blockHash: ${block.blockHash}, txCount: ${transactions.length}`,
+          );
           await ws.send(
             JSON.stringify({
               type: 'block',
@@ -253,16 +293,22 @@ export async function conditionalMakeBlock(proposer) {
               transactions,
             }),
           );
-          logger.debug('Send unsigned block-assembler transactions to ws client');
+          logger.info(
+            '[WEBSOCKET] Block successfully sent to proposer. Proposer should now publish it on-chain.',
+          );
         } else {
           increaseProposerBlockNotSent();
-
-          if (ws) logger.debug({ msg: 'Block not sent', socketState: ws.readyState });
-          else logger.debug('Block not sent. Non-initialized socket');
+          if (ws) {
+            logger.debug({
+              msg: '[WEBSOCKET] Block not sent - websocket in wrong state',
+              socketState: ws.readyState,
+            });
+          } else {
+            logger.debug('[WEBSOCKET] Block not sent. Non-initialized socket');
+          }
         }
 
-        // remove the transactions from the mempool so we don't keep making new
-        // blocks with them
+        // remove the transactions from the mempool so we don't keep making new blocks with them
         await removeTransactionsFromMemPool(block.transactionHashes);
       }
     }

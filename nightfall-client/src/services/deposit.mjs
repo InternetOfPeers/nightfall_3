@@ -26,6 +26,9 @@ const { generalise } = gen;
 
 async function deposit(depositParams) {
   logger.info('Creating a deposit transaction');
+  logger.info(
+    `[DEPOSIT] Received deposit request - Raw value: ${depositParams.value}, tokenType: ${depositParams.tokenType}`,
+  );
   const { tokenType, providedCommitmentsFee, ...items } = depositParams;
   const ercAddress = generalise(items.ercAddress.toLowerCase());
   // before we do anything else, long hex strings should be generalised to make subsequent manipulations easier
@@ -36,6 +39,9 @@ async function deposit(depositParams) {
     fee,
     rootKey,
   } = generalise(items);
+  logger.info(
+    `[DEPOSIT] Generalised values - value: ${value.bigInt.toString()}, fee: ${fee.bigInt.toString()}, tokenId: ${tokenId.bigInt.toString()}`,
+  );
   const { compressedZkpPublicKey, nullifierKey } = new ZkpKeys(rootKey);
   const zkpPublicKey = ZkpKeys.decompressZkpPublicKey(compressedZkpPublicKey);
 
@@ -84,6 +90,9 @@ async function deposit(depositParams) {
     circuitName = DEPOSIT;
   }
 
+  logger.info(
+    `[DEPOSIT] Creating commitment with value: ${valueNewCommitment.bigInt.toString()} (original: ${value.bigInt.toString()}, fee: ${fee.bigInt.toString()})`,
+  );
   let commitment = new Commitment({
     ercAddress,
     tokenId,
@@ -115,6 +124,11 @@ async function deposit(depositParams) {
 
   const circuitHash = await getCircuitHash(circuitName);
 
+  logger.info(
+    `[DEPOSIT] Building transaction - value: ${value.bigInt.toString()}, value.hex(32): ${value.hex(
+      32,
+    )}, ercAddress: ${ercAddress.hex(32)}`,
+  );
   const publicData = new Transaction({
     fee: fee.hex(32),
     historicRootBlockNumberL2: commitmentsInfo.blockNumberL2s,
@@ -129,6 +143,7 @@ async function deposit(depositParams) {
     numberCommitments: VK_IDS[circuitName].numberCommitments,
     isOnlyL2: false,
   });
+  logger.info(`[DEPOSIT] Transaction built - publicData.value: ${publicData.value}`);
 
   const privateData = {
     rootKey,
@@ -179,9 +194,16 @@ async function deposit(depositParams) {
   // and then we can create an unsigned blockchain transaction
   try {
     // store the commitment on successful computation of the transaction
+    const solidityStruct = Transaction.buildSolidityStruct(transaction);
+    logger.info(
+      `[DEPOSIT] Encoding transaction for Shield contract - value in struct: ${solidityStruct.value}`,
+    );
     const rawTransaction = await shieldContractInstance.methods
-      .submitTransaction(Transaction.buildSolidityStruct(transaction))
+      .submitTransaction(solidityStruct)
       .encodeABI();
+    logger.info(
+      `[DEPOSIT] Transaction encoded successfully. Length: ${rawTransaction.length} chars`,
+    );
     await saveExtendedTransaction(
       transaction,
       commitmentsInfo,

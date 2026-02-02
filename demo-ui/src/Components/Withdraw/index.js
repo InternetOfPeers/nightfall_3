@@ -4,16 +4,18 @@ import './index.css';
 
 function Withdraw({ users, updateLoader, erc20Address }) {
   const [withdrawValue, setWithdrawValue] = React.useState();
+  const [offchain, setOffchain] = React.useState(false);
+  const currentUser = users.find(user => user.isCurrent);
 
   function doWithdraw(e) {
     e.preventDefault();
-    if (!users[0]) return;
+    if (!users[0] || !currentUser) return;
 
     updateLoader(true);
-    const [{ nf3Object }] = users.filter(user => user.isCurrent);
+    const { nf3Object } = currentUser;
     nf3Object
       .withdraw(
-        false,
+        offchain,
         erc20Address,
         'ERC20',
         Number(withdrawValue),
@@ -40,6 +42,20 @@ function Withdraw({ users, updateLoader, erc20Address }) {
               value={withdrawValue}
               onChange={e => setWithdrawValue(e.target.value)}
             />
+          </div>
+          <div className="form-group form-custom-field">
+            <div className="form-check">
+              <input
+                className="form-check-input"
+                type="checkbox"
+                id="offchainWithdraw"
+                checked={offchain}
+                onChange={e => setOffchain(e.target.checked)}
+              />
+              <label className="form-check-label" htmlFor="offchainWithdraw">
+                Offchain (instant withdrawal, requires liquidity provider)
+              </label>
+            </div>
           </div>
           <div className="form-group form-custom-field">
             <button type="button" className="btn btn-primary" onClick={doWithdraw}>

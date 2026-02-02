@@ -3,9 +3,8 @@ import amqp from 'amqplib';
 export default {
   // connect to RabbitMQ server.
   async connect() {
-    this.connection = await amqp.connect(
-      `${process.env.RABBITMQ_HOST}:${process.env.RABBITMQ_PORT}`,
-    );
+    const url = `${process.env.RABBITMQ_HOST}:${process.env.RABBITMQ_PORT}?frameMax=0`;
+    this.connection = await amqp.connect(url);
     this.channel = await this.connection.createChannel();
     this.channel.prefetch(1);
   },

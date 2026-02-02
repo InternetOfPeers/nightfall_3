@@ -1,4 +1,3 @@
-version: '3.5'
 # Use this script for running up nightfall_3 in 'developer' mode with local
 # bindings.  See the readme for more information.
 services:
@@ -36,7 +35,7 @@ services:
         target: /config/default.js
     ports:
       - 9239:9229
-    command: ['npm', 'run', 'dev']
+    command: [ 'npm', 'run', 'dev' ]
     environment:
       - CALL_WEBHOOK_ON_CONFIRMATION=true
       - WEBHOOK_PATH=http://host.docker.internal:3099/zk-tx-response
@@ -93,7 +92,7 @@ services:
         target: /app/config/default.js
     ports:
       - 9229:9229
-    command: ['npm', 'run', 'dev']
+    command: [ 'npm', 'run', 'dev' ]
 
   worker:
     build:
@@ -115,11 +114,11 @@ services:
     ports:
       # to use with postman and etc
       - 8091:80
-    entrypoint: ['npm', 'run', 'start']
+    entrypoint: [ 'npm', 'run', 'start' ]
 
   hosted-utils-api-server:
     volumes:
       - ../hosted-utils-api-server/entrypoint.sh:/app/entrypoint.sh
     ports:
       - 9249:9229
-    command: ['npm', 'run', 'dev']
+    command: [ 'npm', 'run', 'dev' ]

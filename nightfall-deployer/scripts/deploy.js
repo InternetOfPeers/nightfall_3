@@ -7,7 +7,7 @@ const fsPromises = require('node:fs/promises');
 const { networks } = require('../hardhat.config.js');
 const { deployMockTokens } = require('./deploy-mocks.js');
 
-const { DEPLOY_MOCK_TOKENS = true } = process.env;
+const { DEPLOY_MOCK_TOKENS = true, FEE_L2_TOKEN_ADDRESS } = process.env;
 
 const {
     RESTRICTIONS,
@@ -18,12 +18,12 @@ const {
     TEST_OPTIONS: {
         addresses: { sanctionedUser },
     },
-    // FEE_L2_TOKEN_ID,
     CONTRACT_ARTIFACTS,
 } = config;
 const { addresses } = RESTRICTIONS;
 const { SIGNATURE_THRESHOLD, APPROVERS } = MULTISIG;
 const { chainId } = networks[process.env.ETH_NETWORK];
+
 
 // function to sort addresses into ascending order (required for SimpleMultiSig)
 function sortAscending(hexArray) {
@@ -246,10 +246,14 @@ async function main() {
         // deploy mock tokens (if required)
         if (DEPLOY_MOCK_TOKENS === 'false') {
             console.log('Mock tokens not required');
-            return;
+        } else {
+            await deployMockTokens(shieldInstance, stateInstance, deployer, storeDeploymentInfo);
+            console.log('Mock tokens deployed');
         }
-        await deployMockTokens(shieldInstance, stateInstance, deployer, storeDeploymentInfo);
-        console.log('Mock tokens deployed');
+        console.log(`All contracts deployed and initialised successfully. Setting fee token address ${FEE_L2_TOKEN_ADDRESS}`);
+        await shieldInstance.setFeeL2TokenAddress(FEE_L2_TOKEN_ADDRESS);
+        await stateInstance.setFeeL2TokenAddress(FEE_L2_TOKEN_ADDRESS);
+        console.log('Fee token address set successfully');
     } catch (error) {
         console.error(error);
         process.exit(1);

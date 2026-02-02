@@ -33,11 +33,12 @@ const {
   signingKeys,
   restrictions: { erc20default },
 } = config.TEST_OPTIONS;
+
 const {
   DEPLOY_MOCKED_SANCTIONS_CONTRACT,
   RESTRICTIONS,
   RESTRICTIONS: {
-    tokens: { [process.env.ETH_NETWORK || 'blockchain']: maxWithdrawValue },
+    tokens: { [process.env.ETH_NETWORK || 'blockchain']: amount },
   },
 } = config;
 
@@ -62,6 +63,7 @@ const nf3Proposer = new Nf3(signingKeys.proposer1, environment);
 async function makeBlock() {
   logger.debug(`Make block...`);
   await nf3Proposer.makeBlockNow();
+  logger.debug(`Block made.`);
   await web3Client.waitForEvent(eventLogs, ['blockProposed']);
 }
 
@@ -78,10 +80,10 @@ describe('ERC20 tests', () => {
     if (DEPLOY_MOCKED_SANCTIONS_CONTRACT) await nf3UserSanctioned.init(mnemonics.sanctionedUser);
 
     await nf3Proposer.init(mnemonics.proposer);
-    await nf3Proposer.registerProposer(
-      'http://localhost:8081',
-      await nf3Proposer.getMinimumStake(),
-    );
+    const minimumStake = await nf3Proposer.getMinimumStake();
+    const weibarMinimumStake = minimumStake * 1e10;
+    await nf3Proposer.registerProposer('http://localhost:8081', weibarMinimumStake);
+    logger.debug(`Proposer registered with minimum stake of ${weibarMinimumStake}`);
     // Proposer listening for incoming events
     const newGasBlockEmitter = await nf3Proposer.startProposer();
     newGasBlockEmitter.on('rollback', () => {
@@ -91,10 +93,12 @@ describe('ERC20 tests', () => {
       );
     });
     erc20Address =
-      maxWithdrawValue.find(e => e.name === process.env.ERC20_COIN)?.address.toLowerCase() ||
+      amount.find(e => e.name === process.env.ERC20_COIN)?.address.toLowerCase() ||
       (await nf3User.getContractAddress('ERC20Mock'));
+    logger.debug(`Using ERC20 address: ${erc20Address}`);
     stateAddress = await nf3User.stateContractAddress;
     web3Client.subscribeTo('logs', eventLogs, { address: stateAddress });
+    logger.debug(`Subscribed to logs for state address ${stateAddress}`);
     // if we're using a real blockchain, there may be some transactions left from the last run so clear them out
     const nodeInfo = await web3Client.getInfo();
     console.log('NODE INFO', nodeInfo);
@@ -113,7 +117,9 @@ describe('ERC20 tests', () => {
   describe('Deposits', () => {
     it('Should increment user L2 balance after depositing some ERC20', async function () {
       const userL2BalanceBefore = await getLayer2Balances(nf3User, erc20Address);
+      logger.debug(`User L2 balance before deposit: ${userL2BalanceBefore}`);
       const res = await nf3User.deposit(erc20Address, tokenType, transferValue, tokenId, fee);
+      logger.debug(`Deposit transaction receipt: ${res}`);
       expectTransaction(res);
       logger.debug(`Gas used was ${Number(res.gasUsed)}`);
       await makeBlock();
@@ -185,6 +191,14 @@ describe('ERC20 tests', () => {
       expectTransaction(res);
       logger.debug(`Gas used was ${Number(res.gasUsed)}`);
       await makeBlock();
+
+      // Wait for recipient's client to process the block and update balance
+      await waitForSufficientBalance({
+        nf3User: nf3User2,
+        value: transferValue,
+        ercAddress: erc20Address,
+        message: 'Waiting for user2 to receive transfer',
+      });
 
       const userL2BalanceAfter = await getLayer2Balances(nf3User, erc20Address);
       const user2L2BalanceAfter = await getLayer2Balances(nf3User2, erc20Address);
@@ -475,7 +489,7 @@ describe('ERC20 tests', () => {
     */
   describe('Deposit and withdrawal restrictions', () => {
     const maxERC20WithdrawValue =
-      maxWithdrawValue.find(e => e.address.toLowerCase() === erc20Address)?.amount || erc20default;
+      amount.find(e => e.address.toLowerCase() === erc20Address)?.amount || erc20default;
     console.log('************************maxERC20WithdrawValue', maxERC20WithdrawValue);
     const maxERC20DepositValue = Math.floor(maxERC20WithdrawValue / 4);
     console.log('************************maxERC20DepositValue', maxERC20DepositValue);

@@ -661,7 +661,7 @@ async function verifyEnoughCommitments(
       .sort((a, b) => Number(a.preimage.value.bigInt - b.preimage.value.bigInt));
 
     const c = commitments.length; // Store the number of commitments
-    logger.debug({ msg: 'filered commitments', commitments });
+    logger.debug({ msg: 'filtered commitments', count: c, commitments });
 
     // At most, we can use (maxNullifiers - number of fee commitments needed) commitments to pay for the
     // transfer or withdraw. However, it is possible that the user doesn't have enough commitments.

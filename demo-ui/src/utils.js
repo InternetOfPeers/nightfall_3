@@ -19,6 +19,10 @@ export function parseBalance(obj, erc20Address) {
 export async function getUserBalances(nf3Object, erc20Address) {
   console.log(await nf3Object.getLayer2Balances(), nf3Object);
   const l2Balance = parseBalance(await nf3Object.getLayer2Balances(), erc20Address);
+  if (!window.ethereum) {
+    console.warn('Wallet extension is not installed. L1 balance unavailable.');
+    return { l2Balance, l1Balance: 0 };
+  }
   const l1Balance = await window.ethereum.request({
     method: 'eth_getBalance',
     params: [nf3Object.ethereumAddress, 'latest'],
@@ -26,11 +30,22 @@ export async function getUserBalances(nf3Object, erc20Address) {
   return { l2Balance, l1Balance: Number(Web3.utils.fromWei(l1Balance, 'ether')).toFixed(10) };
 }
 
-export function getMetamaskEOA() {
+export function getWalletEOA() {
+  if (!window.ethereum) {
+    throw new Error(
+      'Wallet extension is not installed. Please install Rabbit Wallet or MetaMask browser extension.',
+    );
+  }
   return window.ethereum.request({ method: 'eth_requestAccounts' });
 }
 
-export function listenMetmaskEOAChange(callback) {
+export function listenWalletEOAChange(callback) {
+  if (!window.ethereum) {
+    console.warn(
+      'Wallet extension is not installed. Please install Rabbit Wallet or MetaMask browser extension.',
+    );
+    return;
+  }
   window.ethereum.on('accountsChanged', callback);
 }
 
@@ -47,18 +62,6 @@ export function swithNetwork(chainId) {
 
 export function addNetwork(chainId) {
   switch (Number(chainId)) {
-    case 80001:
-      return window.ethereum.request({
-        method: 'wallet_addEthereumChain',
-        params: [
-          {
-            chainName: 'Mumbai Testnet',
-            chainId: Web3.utils.toHex(chainId),
-            nativeCurrency: { name: 'MATIC', decimals: 18, symbol: 'MATIC' },
-            rpcUrls: ['https://rpc-mumbai.maticvigil.com/'],
-          },
-        ],
-      });
     case 137:
       return window.ethereum.request({
         method: 'wallet_addEthereumChain',
@@ -70,6 +73,30 @@ export function addNetwork(chainId) {
             rpcUrls: [
               'https://rpc.ankr.com/polygon/486f6d938d85e35aeacf83a59afd95c4fab739093c8f919adb258799d81d51bf',
             ],
+          },
+        ],
+      });
+    case 296:
+      return window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+          {
+            chainName: 'Hedera Testnet',
+            chainId: Web3.utils.toHex(chainId),
+            nativeCurrency: { name: 'HBAR', decimals: 18, symbol: 'HBAR' },
+            rpcUrls: ['https://testnet.hashio.io/api'],
+          },
+        ],
+      });
+    case 80001:
+      return window.ethereum.request({
+        method: 'wallet_addEthereumChain',
+        params: [
+          {
+            chainName: 'Mumbai Testnet',
+            chainId: Web3.utils.toHex(chainId),
+            nativeCurrency: { name: 'MATIC', decimals: 18, symbol: 'MATIC' },
+            rpcUrls: ['https://rpc-mumbai.maticvigil.com/'],
           },
         ],
       });

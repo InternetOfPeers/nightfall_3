@@ -13,7 +13,7 @@ import Deposit from './Components/Deposit';
 import Transfer from './Components/Transfer';
 import Withdraw from './Components/Withdraw';
 
-import { getUserBalances, getMetamaskEOA, listenMetmaskEOAChange } from './utils';
+import { getUserBalances, getWalletEOA, listenWalletEOAChange } from './utils';
 
 import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
@@ -29,7 +29,7 @@ function App() {
     const user = new Nf3('');
     await user.init(mnemonic);
     const { l2Balance, l1Balance } = await getUserBalances(user, erc20Address);
-    const metamaskEOA = (await getMetamaskEOA())[0];
+    const walletEOA = (await getWalletEOA())[0];
     setUsers(users => [
       ...users,
       {
@@ -37,7 +37,7 @@ function App() {
         l2Balance,
         l1Balance,
         nf3Object: user,
-        isCurrent: user.ethereumAddress.toLowerCase() === metamaskEOA,
+        isCurrent: user.ethereumAddress.toLowerCase() === walletEOA.toLowerCase(),
       },
     ]);
   }
@@ -51,14 +51,17 @@ function App() {
   }
 
   async function changeCurrentUser() {
-    const metamaskEOA = (await getMetamaskEOA())[0];
+    const walletEOA = (await getWalletEOA())[0];
     setUsers(users =>
       users.map(user => {
-        return { ...user, isCurrent: user.nf3Object.ethereumAddress.toLowerCase() === metamaskEOA };
+        return {
+          ...user,
+          isCurrent: user.nf3Object.ethereumAddress.toLowerCase() === walletEOA.toLowerCase(),
+        };
       }),
     );
   }
-  listenMetmaskEOAChange(changeCurrentUser);
+  listenWalletEOAChange(changeCurrentUser);
 
   async function updateBalances(onlyL2 = false) {
     const user1 = await getUserBalances(users[0].nf3Object, erc20Address);

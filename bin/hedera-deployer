@@ -1,0 +1,8 @@
+#!/bin/bash
+# Usage: ./bin/hedera-deployer <ETH_PRIVATE_KEY>
+
+echo "Setting up the environment variables for nf3 deployer ..."
+source bin/hedera-deployment.env $1 $2
+
+echo "Running nightfall deployer script..."
+./bin/deploy-contracts .env.deployment.hedera

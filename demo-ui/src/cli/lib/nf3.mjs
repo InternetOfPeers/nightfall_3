@@ -26,6 +26,7 @@ import {
   GAS_ESTIMATE_ENDPOINT,
   DEFAULT_MIN_L1_WITHDRAW,
   DEFAULT_MIN_L2_WITHDRAW,
+  CONFIRMATIONS,
 } from './constants.mjs';
 
 function ping(ws) {
@@ -124,7 +125,7 @@ class Nf3 {
       clientApiUrl: 'http://localhost:8080',
       optimistApiUrl: 'http://localhost:8081',
       optimistWsUrl: 'ws://localhost:8082',
-      web3WsUrl: 'ws://localhost:8546',
+      web3WsUrl: 'http://localhost:7546',
     },
     zkpKeys,
     clientApiAuthenticationKey,
@@ -1336,7 +1337,11 @@ class Nf3 {
     // we're proxying offchain transactions through the proposers. We send the transaction to every proposer
     // dig up connection peers
     const currentProposer = await this.stateContract.methods.currentProposer().call();
-    const peerList = { [currentProposer.thisAddress]: currentProposer.url };
+    // const peerList = { [currentProposer.thisAddress]: currentProposer.url };
+
+    // Small HACK for the workshop
+
+    const peerList = { [currentProposer.thisAddress]: 'http://localhost:8092' };
     let nextProposer = await this.stateContract.methods
       .proposers(currentProposer.nextAddress)
       .call();
@@ -1578,26 +1583,40 @@ class Nf3 {
    */
   async setWeb3Provider() {
     // initialization of web3 provider has been taken from common-files/utils/web3.mjs
-    //  Target is to mainain web3 socker alive
-    const WEB3_PROVIDER_OPTIONS = {
-      clientConfig: {
-        // Useful to keep a connection alive
-        keepalive: true,
-        keepaliveInterval: 10,
-      },
-      timeout: 3600000,
-      reconnect: {
-        auto: true,
-        delay: 5000, // ms
-        maxAttempts: 120,
-        onTimeout: false,
-      },
-    };
-    const provider = new Web3.providers.WebsocketProvider(this.web3WsUrl, WEB3_PROVIDER_OPTIONS);
+    let provider;
+    // Check if URL is WebSocket or HTTP
+    if (this.web3WsUrl.startsWith('ws://') || this.web3WsUrl.startsWith('wss://')) {
+      //  Target is to mainain web3 socker alive
+      const WEB3_PROVIDER_OPTIONS = {
+        clientConfig: {
+          // Useful to keep a connection alive
+          keepalive: true,
+          keepaliveInterval: 10,
+        },
+        timeout: 3600000,
+        reconnect: {
+          auto: true,
+          delay: 5000, // ms
+          maxAttempts: 120,
+          onTimeout: false,
+        },
+      };
+      provider = new Web3.providers.WebsocketProvider(this.web3WsUrl, WEB3_PROVIDER_OPTIONS);
+      provider.on('error', err => console.log(`web3 error: ${err}`));
+      provider.on('connect', () => console.log('Blockchain Connected ...'));
+      provider.on('end', () => console.log('Blockchain disconnected'));
+    } else {
+      // Use HTTP provider for http:// or https:// URLs
+      const HTTP_PROVIDER_OPTIONS = {
+        keepAlive: true,
+        timeout: 3600000,
+      };
+      provider = new Web3.providers.HttpProvider(this.web3WsUrl, HTTP_PROVIDER_OPTIONS);
+    }
 
     this.web3 = new Web3(provider);
     this.web3.eth.transactionBlockTimeout = 2000;
-    this.web3.eth.transactionConfirmationBlocks = 12;
+    this.web3.eth.transactionConfirmationBlocks = CONFIRMATIONS;
     if (typeof window !== 'undefined') {
       if (window.ethereum && this.ethereumSigningKey === '') {
         this.web3 = new Web3(window.ethereum);
@@ -1607,10 +1626,6 @@ class Nf3 {
         throw new Error('No Web3 provider found');
       }
     }
-
-    provider.on('error', err => console.log(`web3 error: ${err}`));
-    provider.on('connect', () => console.log('Blockchain Connected ...'));
-    provider.on('end', () => console.log('Blockchain disconnected'));
 
     // attempt a reconnect if the socket is down
     this.intervalIDs.push(() => {

@@ -26,6 +26,7 @@ import {
   GAS_ESTIMATE_ENDPOINT,
   DEFAULT_MIN_L1_WITHDRAW,
   DEFAULT_MIN_L2_WITHDRAW,
+  CONFIRMATIONS,
 } from './constants.mjs';
 
 function ping(ws) {
@@ -194,7 +195,7 @@ class Nf3 {
     this.stateContract = await this.getContractInstance('State');
     this.shieldContract = await this.getContractInstance('Shield');
 
-    // set the ethereumAddress iff we have a signing key
+    // set the ethereumAddress if we have a signing key
     if (typeof this.ethereumSigningKey === 'string') {
       this.ethereumAddress = await this.getAccounts();
     }
@@ -435,9 +436,14 @@ class Nf3 {
     let tx;
     let signed;
 
+    logger.debug(`Estimating gas price for transaction to ${contractAddress}`);
+
     await this.nonceMutex.runExclusive(async () => {
+      logger.debug('Acquired nonce mutex');
       // Fetch the current block
       const block = await this.web3.eth.getBlock('latest');
+
+      logger.debug(`Current base fee per gas: ${block.baseFeePerGas}`);
 
       // Fetch the base fee per gas from the block
       const baseFeePerGas = block.baseFeePerGas;
@@ -445,8 +451,12 @@ class Nf3 {
       // Estimate the priority fee per gas
       const priorityFeePerGas = await this.estimatePriorityFeePerGas();
 
+      logger.debug(`Estimated priority fee per gas: ${priorityFeePerGas}`);
+
       // Estimate the gas limit
       const gas = await this.estimateGas(contractAddress, unsignedTransaction);
+
+      logger.debug(`Estimated gas: ${gas}`);
 
       // Update nonce if necessary
       const _nonce = await this.web3.eth.getTransactionCount(this.ethereumAddress, 'pending');
@@ -454,9 +464,9 @@ class Nf3 {
         this.nonce = _nonce;
       }
 
+      logger.debug(`Using nonce: ${this.nonce}`);
       // Calculate the max fee per gas
       const maxFeePerGas = baseFeePerGas + priorityFeePerGas;
-
       tx = {
         from: this.ethereumAddress,
         to: contractAddress,
@@ -469,6 +479,9 @@ class Nf3 {
       };
       this.nonce++;
 
+      logger.debug(
+        `Including ${fee} weibar in the tx from ${this.ethereumAddress} to ${contractAddress}`,
+      );
       if (this.ethereumSigningKey) {
         signed = await this.web3.eth.accounts.signTransaction(tx, this.ethereumSigningKey);
       }
@@ -490,7 +503,7 @@ class Nf3 {
   */
   _sendTransaction(tx) {
     if (this.ethereumSigningKey) {
-      logger.debug('sending signed transaction');
+      logger.debug('Sending signed transaction');
       return this.web3.eth.sendSignedTransaction(tx.rawTransaction);
     }
     return this.web3.eth.sendTransaction(tx);
@@ -508,6 +521,7 @@ class Nf3 {
   @returns {Promise} This will resolve into a transaction receipt.
   */
   async submitTransaction(unsignedTransaction, contractAddress = this.shieldContractAddress, fee) {
+    logger.debug(`Signing transaction: ${unsignedTransaction}, ${contractAddress}, ${fee}`);
     const tx = await this._signTransaction(unsignedTransaction, contractAddress, fee);
     logger.debug(`Sending transaction with hash ${tx.transactionHash}`);
     return this._sendTransaction(tx);
@@ -726,6 +740,9 @@ class Nf3 {
     providedCommitmentsFee = [],
     salt = undefined,
   ) {
+    logger.info(
+      `[DEPOSIT] Starting deposit process - ercAddress: ${ercAddress}, tokenType: ${tokenType}, value: ${value}, tokenId: ${tokenId}, fee: ${fee}`,
+    );
     let txDataToSign;
     try {
       txDataToSign = await approve(
@@ -738,14 +755,16 @@ class Nf3 {
         !!this.ethereumSigningKey,
       );
     } catch (err) {
-      logger.error(`Approve transaction failed`);
+      logger.error(`[DEPOSIT] Approve transaction failed`);
       throw new Error(err);
     }
+    logger.info(`[DEPOSIT] Approval ${txDataToSign ? 'required and completed' : 'not needed'}`);
     if (txDataToSign) {
       userQueue.push(() => {
         return this.submitTransaction(txDataToSign, ercAddress, 0);
       });
     }
+    logger.info(`[DEPOSIT] Sending deposit request to client - value: ${value}`);
     const res = await axios.post(`${this.clientBaseUrl}/deposit`, {
       ercAddress,
       tokenId,
@@ -756,18 +775,23 @@ class Nf3 {
       providedCommitmentsFee,
       salt,
     });
-
+    logger.info(
+      `[DEPOSIT] Deposit request to client successful (received response with txDataToSign)`,
+    );
     if (res.data.error) {
       throw new Error(res.data.error);
     }
     return new Promise((resolve, reject) => {
       userQueue.push(async () => {
         try {
-          logger.debug('Deposit transaction being processed');
+          logger.debug(`[DEPOSIT] Submitting deposit transaction to Shield contract`);
           const receipt = await this.submitTransaction(
             res.data.txDataToSign,
             this.shieldContractAddress,
             0,
+          );
+          logger.info(
+            `[DEPOSIT] Deposit transaction confirmed! TxHash: ${receipt.transactionHash}`,
           );
           resolve(receipt);
         } catch (err) {
@@ -1067,11 +1091,13 @@ class Nf3 {
     @returns {Promise} A promise that resolves to the Ethereum transaction receipt.
     */
   async registerProposer(url, stake, fee) {
+    console.debug('Registering proposer', this.ethereumAddress, 'with stake', stake);
     const res = await axios.post(`${this.optimistBaseUrl}/proposer/register`, {
       address: this.ethereumAddress,
       url,
       fee,
     });
+    console.debug('Proposer registration response received');
     if (res.data.txDataToSign === '') return false; // already registered
     return new Promise((resolve, reject) => {
       proposerQueue.push(async () => {
@@ -1445,7 +1471,7 @@ class Nf3 {
     return Promise.any(
       Object.keys(peerList).map(async address => {
         logger.debug(
-          `offchain transaction - calling ${peerList[address]}/proposer/offchain-transaction`,
+          `Offchain transaction - calling ${peerList[address]}/proposer/offchain-transaction`,
         );
         return axios.post(
           `${peerList[address]}/proposer/offchain-transaction`,
@@ -1669,25 +1695,37 @@ class Nf3 {
   async setWeb3Provider() {
     // initialization of web3 provider has been taken from common-files/utils/web3.mjs
     //  Target is to mainain web3 socker alive
-    const WEB3_PROVIDER_OPTIONS = {
-      clientConfig: {
-        // Useful to keep a connection alive
-        keepalive: true,
-        keepaliveInterval: 10,
-      },
-      timeout: 3600000,
-      reconnect: {
-        auto: true,
-        delay: 5000, // ms
-        maxAttempts: 120,
-        onTimeout: false,
-      },
-    };
-    const provider = new Web3.providers.WebsocketProvider(this.web3WsUrl, WEB3_PROVIDER_OPTIONS);
+    let provider;
+
+    // Check if URL is WebSocket or HTTP
+    if (this.web3WsUrl.startsWith('ws://') || this.web3WsUrl.startsWith('wss://')) {
+      const WEB3_PROVIDER_OPTIONS = {
+        clientConfig: {
+          // Useful to keep a connection alive
+          keepalive: true,
+          keepaliveInterval: 10,
+        },
+        timeout: 3600000,
+        reconnect: {
+          auto: true,
+          delay: 5000, // ms
+          maxAttempts: 120,
+          onTimeout: false,
+        },
+      };
+      provider = new Web3.providers.WebsocketProvider(this.web3WsUrl, WEB3_PROVIDER_OPTIONS);
+    } else {
+      // Use HTTP provider for http:// or https:// URLs
+      const HTTP_PROVIDER_OPTIONS = {
+        keepAlive: true,
+        timeout: 3600000,
+      };
+      provider = new Web3.providers.HttpProvider(this.web3WsUrl, HTTP_PROVIDER_OPTIONS);
+    }
 
     this.web3 = new Web3(provider);
     this.web3.eth.transactionBlockTimeout = 2000;
-    this.web3.eth.transactionConfirmationBlocks = 12;
+    this.web3.eth.transactionConfirmationBlocks = CONFIRMATIONS;
     if (typeof window !== 'undefined') {
       if (window.ethereum && this.ethereumSigningKey === '') {
         this.web3 = new Web3(window.ethereum);
@@ -1698,24 +1736,29 @@ class Nf3 {
       }
     }
 
-    provider.on('error', err => logger.error(`web3 error: ${err}`));
-    provider.on('connect', () => logger.info('Blockchain Connected ...'));
-    provider.on('end', () => logger.info('Blockchain disconnected'));
+    // Only set up WebSocket-specific event handlers and reconnection logic for WebSocket providers
+    if (this.web3WsUrl.startsWith('ws://') || this.web3WsUrl.startsWith('wss://')) {
+      provider.on('error', err => logger.error(`web3 error: ${err}`));
+      provider.on('connect', () => logger.info('Blockchain Connected ...'));
+      provider.on('end', () => logger.info('Blockchain disconnected'));
 
-    // attempt a reconnect if the socket is down
-    this.intervalIDs.push(() => {
-      setInterval(() => {
-        if (!this.web3.currentProvider.connected) this.web3.setProvider(provider);
-      }, 2000);
-    });
-    // set up a pinger to ping the web3 provider. This will help to further ensure
-    // that the websocket doesn't timeout. We don't use the blockNumber but we save it
-    // anyway. Someone may find a use for it.
-    this.intervalIDs.push(() => {
-      setInterval(() => {
-        this.blockNumber = this.web3.eth.getBlockNumber();
-      }, WEBSOCKET_PING_TIME);
-    });
+      // attempt a reconnect if the socket is down
+      this.intervalIDs.push(() => {
+        setInterval(() => {
+          if (!this.web3.currentProvider.connected) this.web3.setProvider(provider);
+        }, 2000);
+      });
+      // set up a pinger to ping the web3 provider. This will help to further ensure
+      // that the websocket doesn't timeout. We don't use the blockNumber but we save it
+      // anyway. Someone may find a use for it.
+      this.intervalIDs.push(() => {
+        setInterval(() => {
+          this.blockNumber = this.web3.eth.getBlockNumber();
+        }, WEBSOCKET_PING_TIME);
+      });
+    } else {
+      logger.info('Using HTTP provider for Web3 connection');
+    }
   }
 
   /**
@@ -1792,6 +1835,7 @@ class Nf3 {
       oidGroup,
       address,
     });
+    logger.debug(`Certificate validation response: ${JSON.stringify(res.data)}`);
     const txDataToSign = res.data;
     return this.submitTransaction(txDataToSign, this.x509ContractAddress);
   }

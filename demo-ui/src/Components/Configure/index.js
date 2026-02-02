@@ -7,11 +7,18 @@ import { swithNetwork, addNetwork } from '../../utils';
 function Configure({ setERC20Address }) {
   const [erc20Address, setLocalERC20Address] = React.useState('');
   const [chainId, setChainId] = React.useState(
-    window.ethereum.networkVersion ? `${window.ethereum.networkVersion}` : '1337',
+    window.ethereum?.networkVersion ? `${window.ethereum.networkVersion}` : '1337',
   );
   async function doConfigure(e) {
     if (!erc20Address) console.log('Provided ERC20 address is not valid');
     e.preventDefault();
+    if (!window.ethereum) {
+      // eslint-disable-next-line no-alert
+      alert(
+        'Rabbit Wallet or MetaMask is not installed. Please install a wallet browser extension.',
+      );
+      return;
+    }
     if (window.ethereum.networkVersion !== Number(chainId)) {
       try {
         await swithNetwork(chainId);
@@ -51,8 +58,8 @@ function Configure({ setERC20Address }) {
                   }
                   return setLocalERC20Address(e.target.value);
                 }}
-                value="0x4315287906f3fcf2345ad1bfe0f682457b041fa7"
-                checked={erc20Address === '0x4315287906f3fcf2345ad1bfe0f682457b041fa7'}
+                value="0xb1F616b8134F602c3Bb465fB5b5e6565cCAd37Ed"
+                checked={erc20Address === '0xb1F616b8134F602c3Bb465fB5b5e6565cCAd37Ed'}
                 style={{ marginRight: '10px' }}
               />
               <label>
@@ -60,8 +67,7 @@ function Configure({ setERC20Address }) {
               </label>
               <label>
                 <small>
-                  0x4315287906f3fcf2345ad1bfe0f682457b041fa7, if testing with local ganache from
-                  nightfall start script.
+                  0xb1F616b8134F602c3Bb465fB5b5e6565cCAd37Ed, if testing with Hedera WHBAR.
                 </small>
               </label>
             </div>
@@ -70,6 +76,17 @@ function Configure({ setERC20Address }) {
               onChange={e => setChainId(e.target.value)}
             >
               <label className="form-label"> Connect To: </label>
+              <div className="form-check">
+                <input
+                  className="form-check-input"
+                  type="radio"
+                  name="metamaskNetwork"
+                  onChange={() => {}}
+                  value="296"
+                  checked={chainId === '296'}
+                />
+                <label className="form-check-label">Hedera Testnet</label>
+              </div>
               <div className="form-check">
                 <input
                   className="form-check-input"

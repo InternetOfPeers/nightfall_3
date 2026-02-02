@@ -26,7 +26,7 @@ const {
 
 const {
   RESTRICTIONS: {
-    tokens: { [process.env.ETH_NETWORK || 'blockchain']: maxWithdrawValue },
+    tokens: { [process.env.ETH_NETWORK || 'blockchain']: amount },
   },
 } = config;
 
@@ -50,6 +50,7 @@ describe('x509 tests', () => {
     await nf3Proposer.init(mnemonics.proposer);
     logger.debug('Validating intermediate CA cert');
     await nf3Proposer.validateCertificate(intermediateCaCert, null, false, false, 0, 0);
+    logger.debug('Validating end-user cert for proposer...');
     await nf3Proposer.validateCertificate(
       endUserCert,
       signEthereumAddress(derPrivateKey, nf3Proposer.ethereumAddress),
@@ -58,17 +59,22 @@ describe('x509 tests', () => {
       0,
       nf3Proposer.ethereumAddress,
     );
+    logger.debug('Validated end-user cert for proposer');
     // we must set the URL from the point of view of the client container
     await nf3Proposer.registerProposer(
       'http://localhost:8081',
       await nf3Proposer.getMinimumStake(),
     );
+    logger.debug('Proposer registered');
     await nf3Proposer.startProposer();
+    logger.debug('Proposer started');
     await nf3Users[0].init(mnemonics.user1);
+    logger.debug('Initialized user[0]');
     erc20Address =
-      maxWithdrawValue.find(e => e.name === process.env.ERC20_COIN)?.address.toLowerCase() ||
+      amount.find(e => e.name === process.env.ERC20_COIN)?.address.toLowerCase() ||
       (await nf3Users[0].getContractAddress('ERC20Mock'));
     stateAddress = await nf3Users[0].stateContractAddress;
+    logger.debug(`Using ERC20 address ${erc20Address}`);
     await web3Client.subscribeTo('logs', eventLogs, { address: stateAddress });
     logger.debug(`User[0] has ethereum address ${nf3Users[0].ethereumAddress}`);
   });

@@ -123,7 +123,14 @@ async function setupCircuits() {
         );
         vks[i] = res2.data.vk;
       } catch (err) {
-        logger.error(err);
+        logger.error({
+          msg: 'Error generating verification key',
+          circuit,
+          error: err.message,
+          details: err.response?.data || err.stack,
+        });
+        // Ensure vk remains undefined if generation fails
+        vks[i] = undefined;
       }
     } else {
       logger.info({
@@ -137,11 +144,49 @@ async function setupCircuits() {
   const keyRegistry = await waitForContract('State');
   logger.debug(`Got key registry contract`);
 
+  // Check if any verification keys were successfully generated
+  const validVks = vks.filter(vk => vk !== undefined && vk !== null);
+  if (validVks.length === 0) {
+    logger.error('═══════════════════════════════════════════════════════════════');
+    logger.error('CRITICAL ERROR: No verification keys were successfully generated!');
+    logger.error('═══════════════════════════════════════════════════════════════');
+    logger.error('');
+    logger.error('This means the ZKP circuits cannot work. Common causes:');
+    logger.error('  1. Powers of Tau files are corrupted or missing');
+    logger.error('  2. Worker service disk is full or has permission issues');
+    logger.error('  3. Network issues downloading Powers of Tau files');
+    logger.error('');
+    logger.error('To fix:');
+    logger.error('  1. Stop services: docker-compose down -v');
+    logger.error('  2. Clear volumes: docker volume prune -f');
+    logger.error('  3. Restart: ./bin/start-nightfall -g -d');
+    logger.error('');
+    logger.error('If problem persists, check worker logs: docker-compose logs worker');
+    logger.error('═══════════════════════════════════════════════════════════════');
+
+    throw new Error('No verification keys generated - Nightfall cannot function without them');
+  }
+
+  if (validVks.length < vks.length) {
+    logger.warn(
+      `⚠️  WARNING: Only ${validVks.length} out of ${vks.length} verification keys were generated successfully`,
+    );
+    logger.warn(`⚠️  Some ZKP operations may not work properly`);
+  }
+
   // we should register the vk now
   for (let i = 0; i < vks.length; i++) {
     const circuit = circuitsToSetup[i];
     const vk = vks[i];
     logger.info(`Registering verification key for ${circuit}`);
+
+    // Skip if verification key is not available
+    if (!vk) {
+      logger.error(`Verification key for ${circuit} is undefined or null. Skipping registration.`);
+      // eslint-disable-next-line no-continue
+      continue;
+    }
+
     try {
       delete vk.protocol;
       delete vk.curve;

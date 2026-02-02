@@ -73,6 +73,13 @@ export async function getContractInstance(contractName, deployedAddress) {
     // eslint-disable-next-line no-param-reassign
     deployedAddress = await getContractAddress(contractName);
   }
+
+  logger.debug(
+    deployedAddress
+      ? `Getting instance of deployed contract ${contractName} at address ${deployedAddress}`
+      : `Getting instance of contract ${contractName} without deployed address`,
+  );
+
   const contractInstance = deployedAddress
     ? new web3.eth.Contract(contractInterface.abi, deployedAddress, options)
     : new web3.eth.Contract(contractInterface.abi, options);

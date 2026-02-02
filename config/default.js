@@ -185,8 +185,7 @@ module.exports = {
   },
   BLOCKCHAIN_URL:
     process.env.BLOCKCHAIN_URL ||
-    `ws://${process.env.BLOCKCHAIN_WS_HOST}:${process.env.BLOCKCHAIN_PORT}${process.env.BLOCKCHAIN_PATH || ''
-    }`,
+    `ws://${process.env.BLOCKCHAIN_WS_HOST}:${process.env.BLOCKCHAIN_PORT}${process.env.BLOCKCHAIN_PATH || ''}`,
   ETH_PRIVATE_KEY: process.env.ETH_PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80', // owner's/deployer's private key (defaults to test key)
   ETH_ADDRESS: process.env.ETH_ADDRESS,
   WEB3_OPTIONS: {
@@ -270,13 +269,36 @@ module.exports = {
   },
   PROPOSER_MAX_BLOCK_PERIOD_MILIS: Number(process.env.PROPOSER_MAX_BLOCK_PERIOD_MILIS) || 0,
   ENVIRONMENTS: {
+    hederaTestnet: {
+      name: 'Hedera Testnet',
+      chainId: 296,
+      clientApiUrl: process.env.CLIENT_HOST
+        ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
+        : 'http://localhost:8080',
+      optimistApiUrl: process.env.OPTIMIST_HOST
+        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
+        : 'http://localhost:8081',
+      optimistWsUrl: process.env.OPTIMIST_HOST
+        ? `ws://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_WS_PORT}`
+        : 'ws://localhost:8082',
+      proposerBaseUrl: process.env.PROPOSER_HOST
+        ? `http://${process.env.PROPOSER_HOST}:${process.env.PROPOSER_PORT}`
+        : 'http://localhost:8092',
+      adversarialOptimistApiUrl: 'http://localhost:8088',
+      adversarialOptimistWsUrl: 'ws://localhost:8089',
+      adversarialClientApiUrl: 'http://localhost:8093',
+      adversarialClientWsUrl: 'ws://localhost:8094',
+      web3WsUrl: process.env.BLOCKCHAIN_URL,
+      PROPOSER_KEY: process.env.PROPOSER_KEY,
+      CHALLENGER_KEY: process.env.CHALLENGER_KEY,
+    },
     mainnet: {
       name: 'Mainnet',
       chainId: 1,
       clientApiUrl: '',
       optimistApiUrl: '',
       optimistWsUrl: '',
-      web3WsUrl: '',
+      web3WsUrl: ''
     },
     mumbai: {
       name: 'mumbai',
@@ -584,6 +606,23 @@ module.exports = {
         process.env.BOOT_CHALLENGER_ADDRESS || '0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC',
     },
     tokens: {
+      hedera: [
+        {
+          name: 'USDC',
+          address: '0x0000000000000000000000000000000000068cda',
+          amount: process.env.USDC_RESTRICT || '1000000000',
+        },
+        {
+          name: 'WHBAR',
+          address: '0xb1F616b8134F602c3Bb465fB5b5e6565cCAd37Ed',
+          amount: process.env.WHBAR_RESTRICT || '1000000000000000000000',
+        },
+        {
+          name: 'USDB',
+          address: '0x5b4797eacd5fa23bfadf7ef841cddfb656e14a8b',
+          amount: process.env.USDB_RESTRICT || '1000000000000000000000',
+        },
+      ],
       blockchain: [
         {
           name: 'ERC20Mock',
@@ -801,6 +840,7 @@ module.exports = {
     },
   },
   X509: {
+    hedera: getDefaultX509Params(),
     blockchain: getDefaultX509Params(),
     staging: getDefaultX509Params(),
     staging_edge: getDefaultX509Params(),

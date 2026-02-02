@@ -27,12 +27,17 @@ async function main() {
   await setupCircuits();
   await safeSetupContracts();
   try {
-    Web3.disconnect();
+    const web3Instance = Web3.connection();
+    if (web3Instance?.currentProvider?.connection?.close) {
+      web3Instance.currentProvider.connection.close();
+    }
   } catch (err) {
-    logger.warn(`Attempt to disconnect web3 failed because ${err}`);
-    process.exit(0);
+    logger.warn(
+      `Process completed correctly but attempt to clean disconnect web3 failed with error: ${err}`,
+    );
   }
   logger.info(`deployer bootstrap done`);
+  process.exit(0);
 }
 
 main();

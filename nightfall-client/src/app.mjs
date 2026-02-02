@@ -1,6 +1,7 @@
 /* eslint no-shadow: "off" */
 
 import express from 'express';
+import logger from 'common-files/utils/logger.mjs';
 import { setupHttpDefaults } from 'common-files/utils/httputils.mjs';
 import {
   deposit,
@@ -23,9 +24,16 @@ import {
 
 const app = express();
 
+// Enable CORS first so error responses include proper headers
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  next();
+});
+
 // Add check for syncing state. If it is in syncing state, just respond 400
 app.use((req, res, next) => {
   if (req.app.get('isSyncing')) {
+    logger.warn(`[CLIENT-SYNC] Request blocked - client is still syncing. Path: ${req.path}`);
     res.sendStatus(400);
     return res.status;
   }

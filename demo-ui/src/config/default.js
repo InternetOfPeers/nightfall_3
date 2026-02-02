@@ -268,6 +268,29 @@ module.exports = {
   },
   PROPOSER_MAX_BLOCK_PERIOD_MILIS: Number(process.env.PROPOSER_MAX_BLOCK_PERIOD_MILIS) || 0,
   ENVIRONMENTS: {
+    hederaTestnet: {
+      name: 'Hedera Testnet',
+      chainId: 296,
+      clientApiUrl: process.env.CLIENT_HOST
+        ? `http://${process.env.CLIENT_HOST}:${process.env.CLIENT_PORT}`
+        : 'http://localhost:8080',
+      optimistApiUrl: process.env.OPTIMIST_HOST
+        ? `http://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_PORT}`
+        : 'http://localhost:8081',
+      optimistWsUrl: process.env.OPTIMIST_HOST
+        ? `ws://${process.env.OPTIMIST_HOST}:${process.env.OPTIMIST_WS_PORT}`
+        : 'ws://localhost:8082',
+      proposerBaseUrl: process.env.PROPOSER_HOST
+        ? `http://${process.env.PROPOSER_HOST}:${process.env.PROPOSER_PORT}`
+        : 'http://localhost:8092',
+      adversarialOptimistApiUrl: 'http://localhost:8088',
+      adversarialOptimistWsUrl: 'ws://localhost:8089',
+      adversarialClientApiUrl: 'http://localhost:8093',
+      adversarialClientWsUrl: 'ws://localhost:8094',
+      web3WsUrl: 'http://localhost:7546',
+      PROPOSER_KEY: process.env.PROPOSER_KEY,
+      CHALLENGER_KEY: process.env.CHALLENGER_KEY,
+    },
     mainnet: {
       name: 'Mainnet',
       chainId: 1,
@@ -514,6 +537,23 @@ module.exports = {
         process.env.BOOT_CHALLENGER_ADDRESS || '0xfCb059A4dB5B961d3e48706fAC91a55Bad0035C9',
     },
     tokens: {
+      hedera: [
+        {
+          name: 'USDC',
+          address: '0x0000000000000000000000000000000000068cda',
+          amount: process.env.USDC_RESTRICT || '1000000000',
+        },
+        {
+          name: 'WHBAR',
+          address: '0xb1F616b8134F602c3Bb465fB5b5e6565cCAd37Ed',
+          amount: process.env.WHBAR_RESTRICT || '1000000000000000000000',
+        },
+        {
+          name: 'USDB',
+          address: '0x5b4797eacd5fa23bfadf7ef841cddfb656e14a8b',
+          amount: process.env.USDB_RESTRICT || '1000000000000000000000',
+        },
+      ],
       blockchain: [
         {
           name: 'ERC20Mock',
@@ -695,6 +735,7 @@ module.exports = {
     },
   },
   X509: {
+    hedera: getDefaultX509Params(),
     blockchain: getDefaultX509Params(),
     staging: getDefaultX509Params(),
     staging_edge: getDefaultX509Params(),
