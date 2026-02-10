@@ -1,4 +1,8 @@
-# nightfall_3
+# Nightfall v3
+
+## NOTE
+
+**If you are here for the Hedera workshop, follow the instructions in the [Nightfall v3 on Hedera Workshop repository](https://github.com/InternetOfPeers/nightfall_3-workshop).**
 
 ## Overview
 
