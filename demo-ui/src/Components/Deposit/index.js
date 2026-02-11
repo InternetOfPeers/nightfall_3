@@ -28,6 +28,12 @@ function Deposit({ users, updateLoader, erc20Address }) {
       <div className="container pt-4">
         <form className="form">
           <div className="form-group form-custom-field">
+            <text>
+              Remember tokens have decimals, so if you want to send 1 WHBAR (8 decimals), you need
+              to enter 100000000.
+              <br />
+              <br />
+            </text>
             <input
               type="number"
               className="form-control"
@@ -36,7 +42,7 @@ function Deposit({ users, updateLoader, erc20Address }) {
               onChange={e => setDepositValue(e.target.value)}
             />
             <label>
-              <small>Set fee is {currentFee} tinybars</small>
+              <small>Set fee is {currentFee}.</small>
             </label>
             <label>
               <small

@@ -45,15 +45,21 @@ function Withdraw({ users, updateLoader, erc20Address }) {
           </div>
           <div className="form-group form-custom-field">
             <div className="form-check">
+              <text>
+                The fees will be paid on top of the transfer value you set here, so make sure to
+                have enough balance to cover both the transfer and the fee.
+              </text>
               <input
                 className="form-check-input"
                 type="checkbox"
                 id="offchainWithdraw"
                 checked={offchain}
                 onChange={e => setOffchain(e.target.checked)}
+                disabled={true}
               />
               <label className="form-check-label" htmlFor="offchainWithdraw">
-                Offchain (instant withdrawal, requires liquidity provider)
+                Offchain (instant withdrawal, requires liquidity provider). No liquidity provider
+                configured for this demo, so this option is disabled.
               </label>
             </div>
           </div>

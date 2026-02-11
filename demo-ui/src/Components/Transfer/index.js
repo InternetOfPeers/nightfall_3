@@ -4,14 +4,14 @@ import './index.css';
 
 function Transfer({ users, updateLoader, erc20Address }) {
   const [transferValue, setTransferValue] = React.useState();
-  const [receipent, setReceipent] = React.useState('');
+  const [recipient, setRecipient] = React.useState('');
   const [offchain, setOffchain] = React.useState(false);
   const currentUser = users.find(user => user.isCurrent);
   function doTransfer(e) {
     e.preventDefault();
 
     if (!users[0] || !currentUser) return;
-    if (receipent === '') return;
+    if (recipient === '') return;
 
     updateLoader(true);
     const { nf3Object } = currentUser;
@@ -23,7 +23,7 @@ function Transfer({ users, updateLoader, erc20Address }) {
         'ERC20',
         Number(transferValue),
         '0x00',
-        users[Number(receipent)].nf3Object.zkpKeys.compressedZkpPublicKey,
+        users[Number(recipient)].nf3Object.zkpKeys.compressedZkpPublicKey,
       )
       .then(() => updateLoader(false))
       .catch(err => {
@@ -31,7 +31,7 @@ function Transfer({ users, updateLoader, erc20Address }) {
         updateLoader(false);
       });
     setTransferValue('');
-    setReceipent('');
+    setRecipient('');
   }
 
   return (
@@ -39,6 +39,12 @@ function Transfer({ users, updateLoader, erc20Address }) {
       <div className="container pt-4">
         <form className="form">
           <div className="form-group form-custom-field">
+            <text>
+              The fees will be paid <strong>on top</strong> of the transfer value you set here, so
+              make sure to have enough balance to cover both the transfer and the fee.
+              <br />
+              <br />
+            </text>
             <input
               type="number"
               className="form-control"
@@ -51,10 +57,10 @@ function Transfer({ users, updateLoader, erc20Address }) {
             <select
               className="form-select"
               aria-label="Default select example"
-              value={receipent}
-              onChange={e => setReceipent(e.target.value)}
+              value={recipient}
+              onChange={e => setRecipient(e.target.value)}
             >
-              <option value="">Select Receipent</option>
+              <option value="">Select Recipient</option>
               <option value="0">{users[0] && users[0].name}</option>
               <option value="1">{users[1] && users[1].name}</option>
             </select>

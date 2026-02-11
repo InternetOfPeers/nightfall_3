@@ -27,7 +27,7 @@ export async function getUserBalances(nf3Object, erc20Address) {
     method: 'eth_getBalance',
     params: [nf3Object.ethereumAddress, 'latest'],
   });
-  return { l2Balance, l1Balance: Number(Web3.utils.fromWei(l1Balance, 'ether')).toFixed(10) };
+  return { l2Balance, l1Balance: Number(Web3.utils.fromWei(l1Balance, 'ether')).toFixed(8) };
 }
 
 export function getWalletEOA() {

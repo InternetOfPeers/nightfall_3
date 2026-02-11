@@ -63,7 +63,7 @@ function Configure({ setERC20Address }) {
                 style={{ marginRight: '10px' }}
               />
               <label>
-                <small>Use contract address</small>
+                <small>Use WHBAR contract address</small>
               </label>
               <label>
                 <small>
@@ -109,12 +109,6 @@ function Configure({ setERC20Address }) {
                 />
                 <label className="form-check-label">Mumbai Testnet Polygon</label>
               </div>
-            </div>
-            <div className="form-group form-custom-field">
-              <label>
-                To connect to Localhost chainId 1337, please do the switch manually in metamask
-                (please read readme.md for better understanding).
-              </label>
             </div>
             <div className="form-group form-custom-field">
               <button type="button" className="btn btn-primary" onClick={doConfigure}>
