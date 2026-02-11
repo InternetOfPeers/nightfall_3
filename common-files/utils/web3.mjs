@@ -166,15 +166,15 @@ export default {
     let maxPriorityFeePerGas;
     try {
       const latestBlock = await this.web3.eth.getBlock('latest');
-
-      // TODO: I need to test if I can keep this for the workshop. Comment these out if it causes issues with the provider you are using.
-      const feeHistory = await this.web3.eth.getFeeHistory(5, latestBlock.number, [25, 50, 75]);
-      logger.debug(feeHistory, 'Fee History');
-      const formattedFeeHistory = this.formatFeeHistory(feeHistory, false, 5);
-      logger.debug(formattedFeeHistory, 'Formatted Fee History');
-
+      // Log fee history for debugging if enabled in config
+      if (config.SHOW_FEE_HISTORY_LOGS === 'true') {
+        const feeHistory = await this.web3.eth.getFeeHistory(5, latestBlock.number, [25, 50, 75]);
+        logger.debug(feeHistory, 'Fee History');
+        const formattedFeeHistory = this.formatFeeHistory(feeHistory, false, 5);
+        logger.debug(formattedFeeHistory, 'Formatted Fee History');
+      }
       const { baseFeePerGas } = latestBlock;
-      logger.info(baseFeePerGas, 'baseFeePerGas');
+      logger.debug({ baseFeePerGas }, 'baseFeePerGas');
       maxPriorityFeePerGas = await this.estimatePriorityFeePerGas();
       maxFeePerGas = baseFeePerGas + maxPriorityFeePerGas;
     } catch (error) {

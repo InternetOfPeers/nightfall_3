@@ -51,18 +51,61 @@ export function setEnableHeartBeatLogging(flagValue) {
 }
 
 export function getMemoryUsage() {
-  const { heapUsed, heapTotal } = v8.getHeapStatistics();
-  return heapUsed / heapTotal;
+  const heapStats = v8.getHeapStatistics();
+  // eslint-disable-next-line camelcase
+  const { used_heap_size, heap_size_limit } = heapStats;
+  // eslint-disable-next-line camelcase
+  const usage = used_heap_size / heap_size_limit;
+  if (Number.isNaN(usage) || usage === null || usage === undefined) {
+    logger.error(
+      { used_heap_size, heap_size_limit, usage, typeofUsage: typeof usage },
+      'Invalid usage value detected in getMemoryUsage',
+    );
+  }
+  return usage;
 }
 
 export function calculateMempoolLimit() {
   try {
     const currentMemoryUsage = getMemoryUsage();
     const availableMemoryPercentage = MAX_MEMORY_USAGE_PERCENTAGE - currentMemoryUsage;
+
+    logger.trace(
+      {
+        currentMemoryUsage,
+        currentMemoryUsagePercent: `${(currentMemoryUsage * 100).toFixed(2)}%`,
+        availableMemoryPercentage,
+        maxAllowedPercent: `${(MAX_MEMORY_USAGE_PERCENTAGE * 100).toFixed(2)}%`,
+      },
+      'calculateMempoolLimit - memory check',
+    );
+
+    if (Number.isNaN(availableMemoryPercentage)) {
+      logger.error(
+        { MAX_MEMORY_USAGE_PERCENTAGE, currentMemoryUsage, availableMemoryPercentage },
+        'NaN detected in availableMemoryPercentage',
+      );
+    }
     if (availableMemoryPercentage <= 0) return 0;
 
-    const availableMemoryBytes = availableMemoryPercentage * v8.getHeapStatistics().heap_size_limit;
+    const heapSizeLimit = v8.getHeapStatistics().heap_size_limit;
+    const availableMemoryBytes = availableMemoryPercentage * heapSizeLimit;
+    if (Number.isNaN(availableMemoryBytes)) {
+      logger.error(
+        { availableMemoryPercentage, heapSizeLimit, availableMemoryBytes },
+        'NaN detected in availableMemoryBytes',
+      );
+    }
+
     const estimatedMempoolLimit = Math.floor(availableMemoryBytes / ESTIMATED_TRANSACTION_SIZE);
+    if (Number.isNaN(estimatedMempoolLimit)) {
+      logger.error(
+        { availableMemoryBytes, ESTIMATED_TRANSACTION_SIZE, estimatedMempoolLimit },
+        'NaN detected in estimatedMempoolLimit',
+      );
+    }
+
+    logger.trace({ estimatedMempoolLimit }, 'calculateMempoolLimit - result');
 
     return estimatedMempoolLimit;
   } catch (err) {
@@ -135,8 +178,24 @@ export async function conditionalMakeBlock(proposer) {
     }
 
     const mempoolLimit = calculateMempoolLimit();
+    if (Number.isNaN(mempoolLimit)) {
+      logger.error({ mempoolLimit }, 'NaN detected as mempoolLimit return value');
+    }
+
     if (mempoolLimit === 0) {
-      logger.warn('Memory usage too high. Skipping block assembly.');
+      const memUsage = getMemoryUsage();
+      const heapStats = v8.getHeapStatistics();
+      logger.warn({
+        msg: 'Memory usage too high. Skipping block assembly and waiting for GC.',
+        currentMemoryUsage: memUsage,
+        currentMemoryUsagePercent: `${(memUsage * 100).toFixed(2)}%`,
+        maxAllowedPercent: `${(MAX_MEMORY_USAGE_PERCENTAGE * 100).toFixed(2)}%`,
+        usedHeapMB: (heapStats.used_heap_size / 1024 / 1024).toFixed(2),
+        totalHeapMB: (heapStats.total_heap_size / 1024 / 1024).toFixed(2),
+        heapLimitMB: (heapStats.heap_size_limit / 1024 / 1024).toFixed(2),
+      });
+      // Wait 5 seconds before re-queueing to allow garbage collection to run
+      await waitForTimeout(5000);
       return;
     }
 

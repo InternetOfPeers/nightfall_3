@@ -213,7 +213,7 @@ module.exports = {
   PROVING_SCHEME: process.env.PROVING_SCHEME || 'groth16',
   BACKEND: process.env.BACKEND || 'bellman',
   CURVE: process.env.CURVE || 'bn128',
-
+  SHOW_FEE_HISTORY_LOGS: process.env.SHOW_FEE_HISTORY_LOGS || 'false',
   MINIMUM_TRANSACTION_SLOTS: 16,
   MAX_BLOCK_SIZE: Number(process.env.MAX_BLOCK_SIZE) || 50000,
   MEMPOOL_TXS_FETCH_LIMIT: Number(process.env.MEMPOOL_TXS_FETCH_LIMIT) || 5,

@@ -36,7 +36,7 @@ function Deposit({ users, updateLoader, erc20Address }) {
               onChange={e => setDepositValue(e.target.value)}
             />
             <label>
-              <small>Set fee is {currentFee}</small>
+              <small>Set fee is {currentFee} tinybars</small>
             </label>
             <label>
               <small

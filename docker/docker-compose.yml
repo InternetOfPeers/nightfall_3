@@ -106,6 +106,7 @@ services:
       UPGRADE: ${UPGRADE_CONTRACTS}
       WHITELISTING: ${WHITELISTING}
       WETH_RESTRICT: ${WETH_RESTRICT}
+      SHOW_FEE_HISTORY_LOGS: ${SHOW_FEE_HISTORY_LOGS:-false}
 
   hosted-utils-api-server:
     build:

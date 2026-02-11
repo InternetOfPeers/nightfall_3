@@ -97,6 +97,7 @@ services:
       USDC_RESTRICT: ${USDC_RESTRICT}
       WHITELISTING: ${WHITELISTING?WHITELISTING-not-set}
       CONFIRMATIONS: ${CONFIRMATIONS}
+      SHOW_FEE_HISTORY_LOGS: ${SHOW_FEE_HISTORY_LOGS:-false}
 
   mongodb:
     image: mongo:4.4.1-bionic
