@@ -4,7 +4,7 @@
 
 **If you are here for the Hedera workshop, follow the instructions in the [Nightfall v3 on Hedera Workshop repository](https://github.com/InternetOfPeers/nightfall_3-workshop).**
 
-The updates created for the Hedera network on the Nightfall projects, which you can find in this fork, start from the [aqua_fix_ethsepolia](https://github.com/EYBlockchain/nightfall_3/tree/aqua_fix_ethsepolia) branch of the original Nightfall v3 repository. That branch in fact contains several months more of fixes than the main branch.
+The InternetOfPeers fork of the Nightfall project contains adaptations for the Hedera network and improvements to the original codebase, and it is developed starting from the [aqua_fix_ethsepolia](https://github.com/EYBlockchain/nightfall_3/tree/aqua_fix_ethsepolia) branch of the original repository. That branch in fact contains several months more of fixes when compared to the main branch, although it is not merged back to the main branch yet.
 
 ## Overview
 
