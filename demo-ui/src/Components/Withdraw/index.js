@@ -54,8 +54,8 @@ function Withdraw({ users, updateLoader, erc20Address }) {
                 type="checkbox"
                 id="offchainWithdraw"
                 checked={offchain}
+                disabled
                 onChange={e => setOffchain(e.target.checked)}
-                disabled="true"
               />
               <label className="form-check-label" htmlFor="offchainWithdraw">
                 Offchain (instant withdrawal, requires liquidity provider). No liquidity provider
