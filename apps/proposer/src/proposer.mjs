@@ -80,7 +80,9 @@ async function checkAndRegisterProposer(nf3, proposerBaseUrl) {
       if (!hasRegisteredWithOptimist) {
         logger.info('Registering with optimist to ensure isMe flag is set correctly...');
         try {
-          await nf3.registerProposer(proposerBaseUrl, 0);
+          const minimumStakeForReg = await nf3.getMinimumStake();
+          const minimumStakeWeibarsForReg = minimumStakeForReg * 1e10;
+          await nf3.registerProposer(proposerBaseUrl, minimumStakeWeibarsForReg);
           logger.info(
             'Successfully registered with optimist. Optimist should now have isMe=true and queue should restart.',
           );

@@ -64,14 +64,17 @@ async function main() {
         const Utils = await hre.ethers.getContractFactory('Utils', { signer: deployer });
         const utilsInstance = await Utils.deploy();
         await utilsInstance.waitForDeployment();
+        console.log('[SIMPLE-ADDRESS] Utils:', await utilsInstance.getAddress());
 
         const Verifier = await hre.ethers.getContractFactory('Verifier', { signer: deployer });
         const verifierInstance = await Verifier.deploy();
         await verifierInstance.waitForDeployment();
+        console.log('[SIMPLE-ADDRESS] Verifier:', await verifierInstance.getAddress());
 
         const Poseidon = await hre.ethers.getContractFactory('Poseidon', { signer: deployer });
         const poseidonInstance = await Poseidon.deploy();
         await poseidonInstance.waitForDeployment();
+        console.log('[SIMPLE-ADDRESS] Poseidon:', await poseidonInstance.getAddress());
 
         const MerkleTree_Stateless = await hre.ethers.getContractFactory('MerkleTree_Stateless', {
             signer: deployer,
@@ -81,6 +84,7 @@ async function main() {
         });
         const merkleTreeStatelessInstance = await MerkleTree_Stateless.deploy();
         await merkleTreeStatelessInstance.waitForDeployment();
+        console.log('[SIMPLE-ADDRESS] MerkleTree_Stateless:', await merkleTreeStatelessInstance.getAddress());
 
         const ChallengesUtil = await hre.ethers.getContractFactory('ChallengesUtil', {
             signer: deployer,
@@ -90,9 +94,9 @@ async function main() {
         });
         const challengesUtilInstance = await ChallengesUtil.deploy();
         await challengesUtilInstance.waitForDeployment();
+        console.log('[SIMPLE-ADDRESS] ChallengesUtil:', await challengesUtilInstance.getAddress());
 
         // link contracts
-
         const Challenges = await hre.ethers.getContractFactory('Challenges', {
             signer: deployer,
             libraries: {
@@ -122,6 +126,7 @@ async function main() {
             chainId,
         );
         await simpleMultiSigInstance.waitForDeployment();
+        console.log('[SIMPLE-ADDRESS] SimpleMultiSig:', await simpleMultiSigInstance.getAddress());
 
         let sanctionsContractAddress = SANCTIONS_CONTRACT_ADDRESS;
         // if we're just testing, we want to deploy a mock sanctions list. We do it here because
@@ -134,25 +139,42 @@ async function main() {
             await sanctionsListMockInstance.waitForDeployment();
             sanctionsContractAddress = await sanctionsListMockInstance.getAddress();
         }
+        console.log('[SIMPLE-ADDRESS] SanctionsListMock:', sanctionsContractAddress);
 
         // now deploy the proxied contracts
         const X509 = await hre.ethers.getContractFactory('X509', { signer: deployer });
         const x509Instance = await hre.upgrades.deployProxy(X509, []);
         await x509Instance.waitForDeployment();
+        const x509Proxy = await x509Instance.getAddress();
+        console.log('[PROXY-ADDRESS] X509:', x509Proxy);
+        console.log('[IMPL-ADDRESS] X509:', await hre.upgrades.erc1967.getImplementationAddress(x509Proxy));
+        console.log('[ADMIN-ADDRESS] X509:', await hre.upgrades.erc1967.getAdminAddress(x509Proxy));
 
         const Proposers = await hre.ethers.getContractFactory('Proposers', { signer: deployer });
         const proposersInstance = await hre.upgrades.deployProxy(Proposers, []);
         await proposersInstance.waitForDeployment();
+        const proposersProxy = await proposersInstance.getAddress();
+        console.log('[PROXY-ADDRESS] Proposers:', proposersProxy);
+        console.log('[IMPL-ADDRESS] Proposers:', await hre.upgrades.erc1967.getImplementationAddress(proposersProxy));
+        console.log('[ADMIN-ADDRESS] Proposers:', await hre.upgrades.erc1967.getAdminAddress(proposersProxy));
 
         const challengesInstance = await hre.upgrades.deployProxy(Challenges, [], {
             unsafeAllowLinkedLibraries: true,
         });
         await challengesInstance.waitForDeployment();
+        const challengesProxy = await challengesInstance.getAddress();
+        console.log('[PROXY-ADDRESS] Challenges:', challengesProxy);
+        console.log('[IMPL-ADDRESS] Challenges:', await hre.upgrades.erc1967.getImplementationAddress(challengesProxy));
+        console.log('[ADMIN-ADDRESS] Challenges:', await hre.upgrades.erc1967.getAdminAddress(challengesProxy));
 
         const shieldInstance = await hre.upgrades.deployProxy(Shield, [], {
             initializer: 'initializeState',
         });
         await shieldInstance.waitForDeployment();
+        const shieldProxy = await shieldInstance.getAddress();
+        console.log('[PROXY-ADDRESS] Shield:', shieldProxy);
+        console.log('[IMPL-ADDRESS] Shield:', await hre.upgrades.erc1967.getImplementationAddress(shieldProxy));
+        console.log('[ADMIN-ADDRESS] Shield:', await hre.upgrades.erc1967.getAdminAddress(shieldProxy));
 
         const stateInstance = await hre.upgrades.deployProxy(
             State,
@@ -165,6 +187,10 @@ async function main() {
             { initializer: 'initializeState', unsafeAllowLinkedLibraries: true },
         );
         await stateInstance.waitForDeployment();
+        const stateProxy = await stateInstance.getAddress();
+        console.log('[PROXY-ADDRESS] State:', stateProxy);
+        console.log('[IMPL-ADDRESS] State:', await hre.upgrades.erc1967.getImplementationAddress(stateProxy));
+        console.log('[ADMIN-ADDRESS] State:', await hre.upgrades.erc1967.getAdminAddress(stateProxy));
 
         // save the deployment info (Hardhat doesn't do this automatically)
         // eslint-disable-next-line no-undef
@@ -176,6 +202,56 @@ async function main() {
             storeDeploymentInfo(stateInstance, 'State'),
             storeDeploymentInfo(simpleMultiSigInstance, 'SimpleMultiSig'),
         ]);
+
+        // Write verification info file with all deployed addresses
+        const verificationInfo = {
+            simple: [
+                { name: 'Utils', address: await utilsInstance.getAddress() },
+                { name: 'Verifier', address: await verifierInstance.getAddress() },
+                { name: 'Poseidon', address: await poseidonInstance.getAddress() },
+                { name: 'MerkleTree_Stateless', address: await merkleTreeStatelessInstance.getAddress() },
+                { name: 'ChallengesUtil', address: await challengesUtilInstance.getAddress() },
+                { name: 'SimpleMultiSig', address: await simpleMultiSigInstance.getAddress() },
+                { name: 'SanctionsListMock', address: sanctionsContractAddress },
+            ],
+            proxied: [
+                {
+                    name: 'X509',
+                    proxy: x509Proxy,
+                    implementation: await hre.upgrades.erc1967.getImplementationAddress(x509Proxy),
+                    admin: await hre.upgrades.erc1967.getAdminAddress(x509Proxy),
+                },
+                {
+                    name: 'Proposers',
+                    proxy: proposersProxy,
+                    implementation: await hre.upgrades.erc1967.getImplementationAddress(proposersProxy),
+                    admin: await hre.upgrades.erc1967.getAdminAddress(proposersProxy),
+                },
+                {
+                    name: 'Challenges',
+                    proxy: challengesProxy,
+                    implementation: await hre.upgrades.erc1967.getImplementationAddress(challengesProxy),
+                    admin: await hre.upgrades.erc1967.getAdminAddress(challengesProxy),
+                },
+                {
+                    name: 'Shield',
+                    proxy: shieldProxy,
+                    implementation: await hre.upgrades.erc1967.getImplementationAddress(shieldProxy),
+                    admin: await hre.upgrades.erc1967.getAdminAddress(shieldProxy),
+                },
+                {
+                    name: 'State',
+                    proxy: stateProxy,
+                    implementation: await hre.upgrades.erc1967.getImplementationAddress(stateProxy),
+                    admin: await hre.upgrades.erc1967.getAdminAddress(stateProxy),
+                },
+            ],
+        };
+        await fsPromises.writeFile(
+            `${CONTRACT_ARTIFACTS}/verification-info.json`,
+            JSON.stringify(verificationInfo, null, 2),
+        );
+        console.log('Verification info written to', `${CONTRACT_ARTIFACTS}/verification-info.json`);
 
         // initialisation
 

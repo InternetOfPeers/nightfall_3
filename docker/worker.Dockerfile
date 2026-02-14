@@ -1,5 +1,5 @@
 # build circom from source for local verify
-FROM ghcr.io/eyblockchain/local-circom as builder
+FROM ghcr.io/eyblockchain/local-circom AS builder
 FROM node:20.17.0-bullseye-slim
 
 ARG USERNAME=app_user
